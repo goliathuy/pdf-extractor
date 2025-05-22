@@ -184,21 +184,23 @@ def split_pdf_by_section_titles(pdf_path, extracted_text_path, toc_entries, outp
     doc = fitz.open(pdf_path)
     section_files = []
     for idx, (title, start_page) in enumerate(section_starts):
-        end_page = doc.page_count - 1
+        # The end page is the page before the next section's start, or the last page of the document
         if idx + 1 < len(section_starts):
-            end_page = section_starts[idx+1][1] - 2  # 0-based, previous page
+            end_page = section_starts[idx+1][1] - 1  # inclusive, 0-based
+        else:
+            end_page = doc.page_count  # inclusive, 0-based
         safe_title = re.sub(r'[^\w\-]+', '_', title.strip())[:40]
         out_path = os.path.join(output_dir, f'section_{idx+1}_{safe_title}.pdf')
         section_doc = fitz.open()
-        for p in range(start_page-1, end_page+1):
+        for p in range(start_page-1, end_page):
             if 0 <= p < doc.page_count:
                 section_doc.insert_pdf(doc, from_page=p, to_page=p)
         if section_doc.page_count == 0:
-            print(f"[WARN] Skipping section '{title}' (pages {start_page}-{end_page+1}): no pages found.")
+            print(f"[WARN] Skipping section '{title}' (pages {start_page}-{end_page}): no pages found.")
             continue
         section_doc.save(out_path)
         section_files.append(out_path)
-        print(f"[INFO] Saved section '{title}' (pages {start_page}-{end_page+1}) to {out_path}")
+        print(f"[INFO] Saved section '{title}' (pages {start_page}-{end_page}) to {out_path}")
     return section_files
 
 def main():
