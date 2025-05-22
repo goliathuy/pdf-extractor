@@ -15,8 +15,24 @@ def extract_text(pdf_path):
     for i in range(num_pages):
         print(f"[INFO] Extracting text from page {i+1}/{num_pages}...")
         page = doc.load_page(i)
-        text += page.get_text()
-    print(f"[INFO] Finished extracting text from {num_pages} pages.")
+        try:
+            page_dict = page.get_text("dict")
+        except Exception as e:
+            print(f"[WARN] Could not get text dict for page {i+1}: {e}")
+            continue
+        for block in page_dict.get("blocks", []):
+            if block.get("type", 1) != 0:
+                continue  # skip non-text blocks
+            for line in block.get("lines", []):
+                for span in line.get("spans", []):
+                    color = span.get("color", 0)
+                    # PyMuPDF color is int: 0=black, 16777215=white (0xFFFFFF)
+                    # We'll filter out white or nearly white text
+                    if isinstance(color, int) and color >= 0xF0F0F0:
+                        continue  # skip white/nearly white text
+                    text += span.get("text", "")
+                text += "\n"
+    print(f"[INFO] Finished extracting text from {num_pages} pages (filtered for visible text).")
     return text
 
 def save_text(text, out_path):
