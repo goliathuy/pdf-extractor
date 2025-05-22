@@ -1,4 +1,4 @@
-import fitz  # PyMuPDF
+﻿import fitz  # PyMuPDF
 import os
 import json
 import datetime
@@ -221,6 +221,19 @@ def main():
     print(f"Saving combined output to {OUTPUT_JSON_PATH} ...")
     save_json(text, images_info, OUTPUT_JSON_PATH)
     print("Done.")
+
+    # Example TOC entries (replace with your actual TOC list)
+    toc_entries = [
+        "Message From Founders",
+        "General Information",
+        "Sales",
+        "Business Location A",
+        "Business Location B",
+        "Miscellaneous",
+        # ... add more as needed ...
+    ]
+    print("Splitting PDF by detected section titles...")
+    split_pdf_by_section_titles(PDF_PATH, OUTPUT_TEXT_PATH, toc_entries)
 
 if __name__ == '__main__':
     main()
