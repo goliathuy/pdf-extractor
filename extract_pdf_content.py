@@ -1,6 +1,7 @@
 import fitz  # PyMuPDF
 import os
 import json
+import datetime
 # import openai
 
 PDF_PATH = os.path.join('..', 'server-compare', 'samples/sample-pdf-with-images.pdf')
@@ -168,12 +169,15 @@ def find_section_starts(extracted_text, toc_entries):
             print(f"[WARN] Section '{entry}' not found in extracted text.")
     return section_starts
 
-def split_pdf_by_section_titles(pdf_path, extracted_text_path, toc_entries, output_dir):
+def split_pdf_by_section_titles(pdf_path, extracted_text_path, toc_entries, output_dir=None):
     """
     Split the PDF into smaller PDFs by searching for section titles in the extracted text.
-    Each section will be saved as a new PDF in output_dir, named by section title or number.
+    Each section will be saved as a new PDF in a timestamped output_dir, named by section title or number.
     """
     import re
+    if output_dir is None:
+        now = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_dir = os.path.join('procssed_data', f'sections_{now}')
     os.makedirs(output_dir, exist_ok=True)
     with open(extracted_text_path, 'r', encoding='utf-8') as f:
         extracted_text = f.read()
@@ -201,6 +205,7 @@ def split_pdf_by_section_titles(pdf_path, extracted_text_path, toc_entries, outp
         section_doc.save(out_path)
         section_files.append(out_path)
         print(f"[INFO] Saved section '{title}' (pages {start_page}-{end_page}) to {out_path}")
+    print(f"[INFO] All section PDFs saved in: {output_dir}")
     return section_files
 
 def main():
