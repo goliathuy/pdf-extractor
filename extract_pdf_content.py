@@ -1,6 +1,7 @@
 import fitz  # PyMuPDF
 import os
 import json
+# import openai
 
 PDF_PATH = os.path.join('..', 'server-compare', 'samples/sample-pdf-with-images.pdf')
 OUTPUT_TEXT_PATH = 'extracted_text.txt'
@@ -20,19 +21,27 @@ def extract_text(pdf_path):
         except Exception as e:
             print(f"[WARN] Could not get text dict for page {i+1}: {e}")
             continue
+        page_text = ''
         for block in page_dict.get("blocks", []):
             if block.get("type", 1) != 0:
                 continue  # skip non-text blocks
             for line in block.get("lines", []):
                 for span in line.get("spans", []):
                     color = span.get("color", 0)
-                    # PyMuPDF color is int: 0=black, 16777215=white (0xFFFFFF)
-                    # We'll filter out white or nearly white text
                     if isinstance(color, int) and color >= 0xF0F0F0:
                         continue  # skip white/nearly white text
-                    text += span.get("text", "")
-                text += "\n"
-    print(f"[INFO] Finished extracting text from {num_pages} pages (filtered for visible text).")
+                    page_text += span.get("text", "")
+                page_text += "\n"
+        # Add image references for this page
+        images = page.get_images(full=True)
+        if images:
+            for img_index, img in enumerate(images):
+                img_ext = doc.extract_image(img[0])['ext']
+                img_filename = f'image_p{i+1}_{img_index + 1}.{img_ext}'
+                page_text += f'[[IMAGE: {img_filename}]]\n'
+        # Add page separator and number
+        text += f'\n--- PAGE {i+1} ---\n' + page_text.strip() + '\n'
+    print(f"[INFO] Finished extracting text from {num_pages} pages (filtered for visible text, with page numbers and image refs).")
     return text
 
 def save_text(text, out_path):
@@ -75,6 +84,20 @@ def extract_images(pdf_path, images_dir):
             img_count += 1
     print(f"[INFO] Total images extracted: {img_count}")
     return images_info
+
+# def validate_text_chunk(chunk):
+#     prompt = (
+#         "Is the following text well-formed and coherent? "
+#         "If not, suggest corrections or flag issues:\n\n" + chunk
+#     )
+#     response = openai.ChatCompletion.create(
+#         model="gpt-4",
+#         messages=[{"role": "user", "content": prompt}],
+#         max_tokens=500
+#     )
+#     return response['choices'][0]['message']['content']
+# 
+# # Split your extracted text and process each chunk
 
 def save_json(text, images_info, out_path):
     print(f"[INFO] Saving combined text and image info to {out_path} ...")
