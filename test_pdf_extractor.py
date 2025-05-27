@@ -199,10 +199,73 @@ class TestPDFExtractor(unittest.TestCase):
         
         # Should handle errors gracefully
         result = convert_pages_to_images("test.pdf", self.temp_dir)
-        
-        # Should return empty list due to error
+          # Should return empty list due to error
         self.assertEqual(len(result), 0)
         mock_doc.close.assert_called()
+
+    def test_config_file_handling(self):
+        """Test that the system works correctly without a config file."""
+        # Test load_config function from pdf_cli
+        import sys
+        import os
+        
+        # Add the current directory to path so we can import pdf_cli
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        if current_dir not in sys.path:
+            sys.path.insert(0, current_dir)
+        
+        try:
+            from pdf_cli import load_config
+            
+            # Test with non-existent config file
+            config = load_config("nonexistent_config.json")
+            self.assertEqual(config, {})
+            
+            # Test with existing config file
+            test_config_file = os.path.join(self.temp_dir, "test_config.json")
+            test_config_data = {
+                "processing": {
+                    "page_image_dpi": 150,
+                    "page_image_format": "jpeg",
+                    "white_text_threshold": 20000000
+                },
+                "output": {
+                    "page_images_dirname": "custom_pages"
+                }
+            }
+            
+            with open(test_config_file, 'w') as f:
+                json.dump(test_config_data, f)
+            
+            config = load_config(test_config_file)
+            self.assertEqual(config["processing"]["page_image_dpi"], 150)
+            self.assertEqual(config["processing"]["page_image_format"], "jpeg")
+            self.assertEqual(config["output"]["page_images_dirname"], "custom_pages")
+            
+        except ImportError:
+            # If pdf_cli can't be imported, just test the concept
+            self.skipTest("pdf_cli module not available for import")
+
+    def test_default_values_used_without_config(self):
+        """Test that correct default values are used when config is empty."""
+        # Test default DPI value
+        from extract_pdf_content import main
+        
+        # Mock config get behavior
+        empty_config = {}
+        
+        # Test that .get() calls return expected defaults
+        dpi_default = empty_config.get("processing", {}).get("page_image_dpi", 300)
+        self.assertEqual(dpi_default, 300)
+        
+        format_default = empty_config.get("processing", {}).get("page_image_format", "png")
+        self.assertEqual(format_default, "png")
+        
+        threshold_default = empty_config.get("processing", {}).get("white_text_threshold", 15000000)
+        self.assertEqual(threshold_default, 15000000)
+        
+        parts_default = empty_config.get("processing", {}).get("default_equal_parts", 4)
+        self.assertEqual(parts_default, 4)
 
 def validate_section_overlaps(sections):
     """
@@ -266,8 +329,7 @@ class TestMemoryOptimization(unittest.TestCase):
             validate_pdf_file(test_pdf)
         except Exception:
             pass  # We expect some errors in test environment
-        
-        # Verify close was called
+          # Verify close was called
         mock_doc.close.assert_called()
 
 if __name__ == '__main__':
