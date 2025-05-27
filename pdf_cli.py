@@ -51,6 +51,7 @@ Examples:
     parser.add_argument('--dry-run', action='store_true', help='Show what would be processed without actual processing')
     parser.add_argument('--format', choices=['text', 'json', 'xml'], default='text', help='Output format for extracted content')
     parser.add_argument('--threshold', type=int, help='White text color threshold (override config)')
+    parser.add_argument('--verbose-errors', action='store_true', help='Include detailed error tracebacks in batch processing')
     
     return parser.parse_args()
 
@@ -96,7 +97,23 @@ def show_memory_stats():
         print("Memory monitoring requires 'psutil' package. Install with: pip install psutil")
 
 def process_batch(batch_file, config, **kwargs):
-    """Process multiple PDF files from a batch file."""
+    """Process multiple PDF files from a batch file with detailed error categorization."""
+    import datetime
+    import traceback
+    
+    # Error categorization structure
+    error_categories = {
+        'file_not_found': [],
+        'permission_denied': [],
+        'pdf_corruption': [],
+        'validation_errors': [],
+        'processing_errors': [],
+        'memory_errors': [],
+        'unknown_errors': []
+    }
+    
+    success_results = []
+    
     if not os.path.exists(batch_file):
         print(f"❌ Batch file not found: {batch_file}")
         return 1
@@ -109,43 +126,179 @@ def process_batch(batch_file, config, **kwargs):
             print("❌ No PDF files found in the batch file.")
             return 1
         
-        print(f"Found {len(pdf_files)} PDF files in batch file.")
-        
-        success_count = 0
-        failed_files = []
+        print(f"🚀 Starting batch processing of {len(pdf_files)} PDF files...")
+        batch_start_time = datetime.datetime.now()
         
         for idx, pdf_file in enumerate(pdf_files, 1):
             print(f"\n[{idx}/{len(pdf_files)}] Processing: {pdf_file}")
+            file_start_time = datetime.datetime.now()
             
+            # Check if file exists
             if not os.path.exists(pdf_file):
+                error_info = {
+                    'file': pdf_file,
+                    'error': 'File not found',
+                    'timestamp': datetime.datetime.now().isoformat()
+                }
+                error_categories['file_not_found'].append(error_info)
                 print(f"  ❌ File not found: {pdf_file}")
-                failed_files.append(pdf_file)
+                continue
+            
+            # Check file permissions
+            try:
+                with open(pdf_file, 'rb') as test_file:
+                    test_file.read(1)  # Try to read one byte
+            except PermissionError:
+                error_info = {
+                    'file': pdf_file,
+                    'error': 'Permission denied - cannot access file',
+                    'timestamp': datetime.datetime.now().isoformat()
+                }
+                error_categories['permission_denied'].append(error_info)
+                print(f"  ❌ Permission denied: {pdf_file}")
+                continue
+            except Exception as e:
+                error_info = {
+                    'file': pdf_file,
+                    'error': f'File access error: {str(e)}',
+                    'timestamp': datetime.datetime.now().isoformat()
+                }
+                error_categories['unknown_errors'].append(error_info)
+                print(f"  ❌ File access error: {pdf_file} - {e}")
                 continue
             
             try:
+                # Validate PDF before processing
+                validate_pdf_file(pdf_file)
+                
+                # Process the PDF
                 result = extract_main(pdf_path=pdf_file, config=config, **kwargs)
+                
                 if result:
-                    print(f"  ✅ Successfully processed: {pdf_file}")
-                    success_count += 1
+                    processing_time = (datetime.datetime.now() - file_start_time).total_seconds()
+                    success_info = {
+                        'file': pdf_file,
+                        'processing_time_seconds': processing_time,
+                        'timestamp': datetime.datetime.now().isoformat(),
+                        'output_dir': result.get('output_dir', 'N/A'),
+                        'image_count': result.get('image_count', 0),
+                        'text_length': result.get('text_length', 0),
+                        'section_count': result.get('section_count', 0)
+                    }
+                    success_results.append(success_info)
+                    print(f"  ✅ Successfully processed: {pdf_file} ({processing_time:.1f}s)")
                 else:
-                    print(f"  ❌ Failed to process: {pdf_file}")
-                    failed_files.append(pdf_file)
+                    error_info = {
+                        'file': pdf_file,
+                        'error': 'Processing returned no result',
+                        'timestamp': datetime.datetime.now().isoformat(),
+                        'processing_time_seconds': (datetime.datetime.now() - file_start_time).total_seconds()
+                    }
+                    error_categories['processing_errors'].append(error_info)
+                    print(f"  ❌ Processing failed (no result): {pdf_file}")
+                    
+            except PDFProcessingError as e:
+                error_type = 'pdf_corruption' if 'corrupt' in str(e).lower() or 'invalid' in str(e).lower() else 'validation_errors'
+                error_info = {
+                    'file': pdf_file,
+                    'error': str(e),
+                    'error_type': 'PDFProcessingError',
+                    'timestamp': datetime.datetime.now().isoformat(),
+                    'processing_time_seconds': (datetime.datetime.now() - file_start_time).total_seconds()
+                }
+                error_categories[error_type].append(error_info)
+                print(f"  ❌ PDF validation/processing error: {pdf_file} - {e}")
+                
+            except MemoryError as e:
+                error_info = {
+                    'file': pdf_file,
+                    'error': f'Memory error: {str(e)}',
+                    'error_type': 'MemoryError',
+                    'timestamp': datetime.datetime.now().isoformat(),
+                    'processing_time_seconds': (datetime.datetime.now() - file_start_time).total_seconds()
+                }
+                error_categories['memory_errors'].append(error_info)
+                print(f"  ❌ Memory error: {pdf_file} - {e}")
+                
             except Exception as e:
-                print(f"  ❌ Error processing {pdf_file}: {e}")
-                failed_files.append(pdf_file)
+                # Categorize other exceptions
+                error_message = str(e).lower()
+                if 'memory' in error_message or 'out of memory' in error_message:
+                    category = 'memory_errors'
+                elif 'corrupt' in error_message or 'damaged' in error_message or 'invalid pdf' in error_message:
+                    category = 'pdf_corruption'
+                else:
+                    category = 'unknown_errors'
+                
+                error_info = {
+                    'file': pdf_file,
+                    'error': str(e),
+                    'error_type': type(e).__name__,
+                    'timestamp': datetime.datetime.now().isoformat(),
+                    'processing_time_seconds': (datetime.datetime.now() - file_start_time).total_seconds(),
+                    'traceback': traceback.format_exc() if kwargs.get('verbose_errors', False) else None
+                }
+                error_categories[category].append(error_info)
+                print(f"  ❌ {type(e).__name__}: {pdf_file} - {e}")
         
-        print(f"\nBatch processing complete:")
-        print(f"  ✅ Successfully processed: {success_count}/{len(pdf_files)} files")
+        # Generate detailed batch summary
+        batch_end_time = datetime.datetime.now()
+        total_processing_time = (batch_end_time - batch_start_time).total_seconds()
         
-        if failed_files:
-            print(f"  ❌ Failed to process {len(failed_files)} files:")
-            for failed in failed_files:
-                print(f"    - {failed}")
+        print(f"\n" + "="*60)
+        print(f"📊 BATCH PROCESSING SUMMARY")
+        print(f"="*60)
+        print(f"⏱️  Total Processing Time: {total_processing_time:.1f} seconds")
+        print(f"📁 Total Files: {len(pdf_files)}")
+        print(f"✅ Successfully Processed: {len(success_results)}")
+        print(f"❌ Failed: {sum(len(errors) for errors in error_categories.values())}")
         
-        return 0 if not failed_files else 1
+        if success_results:
+            avg_processing_time = sum(r['processing_time_seconds'] for r in success_results) / len(success_results)
+            total_images = sum(r['image_count'] for r in success_results)
+            total_text_length = sum(r['text_length'] for r in success_results)
+            print(f"📈 Average Processing Time: {avg_processing_time:.1f} seconds per file")
+            print(f"🖼️  Total Images Extracted: {total_images}")
+            print(f"📝 Total Text Characters: {total_text_length:,}")
+        
+        # Display error breakdown
+        print(f"\n📋 ERROR BREAKDOWN:")
+        for category, errors in error_categories.items():
+            if errors:
+                category_name = category.replace('_', ' ').title()
+                print(f"  {category_name}: {len(errors)} files")
+                for error in errors[:3]:  # Show first 3 errors of each type
+                    print(f"    - {os.path.basename(error['file'])}: {error['error']}")
+                if len(errors) > 3:
+                    print(f"    ... and {len(errors) - 3} more files")
+        
+        # Save detailed error report if there were errors
+        total_errors = sum(len(errors) for errors in error_categories.values())
+        if total_errors > 0:
+            error_report_path = f"batch_error_report_{batch_start_time.strftime('%Y%m%d_%H%M%S')}.json"
+            try:
+                error_report = {
+                    'batch_start_time': batch_start_time.isoformat(),
+                    'batch_end_time': batch_end_time.isoformat(),
+                    'total_processing_time_seconds': total_processing_time,
+                    'total_files': len(pdf_files),
+                    'successful_files': len(success_results),
+                    'failed_files': total_errors,
+                    'error_categories': error_categories,
+                    'success_results': success_results
+                }
+                
+                with open(error_report_path, 'w', encoding='utf-8') as f:
+                    json.dump(error_report, f, indent=2, ensure_ascii=False)
+                print(f"\n📄 Detailed error report saved: {error_report_path}")
+            except Exception as e:
+                print(f"\n⚠️  Could not save error report: {e}")
+        
+        return 0 if total_errors == 0 else 1
     
     except Exception as e:
-        print(f"❌ Error processing batch: {e}")
+        print(f"❌ Critical error during batch processing: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
         return 1
 
 def analyze_pdf_structure(pdf_path):

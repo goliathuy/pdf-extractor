@@ -68,8 +68,9 @@ def extract_text(pdf_path: str, color_threshold: int = 15000000) -> str:
     
     for page_num in range(len(doc)):
         page = doc[page_num]
-        text_dict = page.get_text("dict")
         
+        text_dict = page.get_text("dict")
+
         page_text = ""
         for block in text_dict.get("blocks", []):
             if block.get("type") == 0:  # Text block
@@ -520,8 +521,7 @@ def main(pdf_path: Optional[str] = None, config: Optional[Dict] = None, **kwargs
     except PDFProcessingError as e:
         logger.error(e)
         return
-    
-    # Create timestamp for output directory
+      # Create timestamp for output directory
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = kwargs.get('output_dir', f"processed_data/extraction_{timestamp}")
     
@@ -529,7 +529,7 @@ def main(pdf_path: Optional[str] = None, config: Optional[Dict] = None, **kwargs
     logger.info(f"PDF: {pdf_path}")
     logger.info(f"Output directory: {output_dir}")
     logger.info("")
-      try:
+    try:
         # Extract text
         logger.info("1. Extracting text...")
         color_threshold = config.get('processing', {}).get('white_text_threshold', 15000000)
