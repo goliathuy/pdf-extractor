@@ -1,4 +1,4 @@
+ignore/*
 test_output/*
-processed_data/
+processed_data/*
 __pycache__
-*.pdf

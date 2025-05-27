@@ -23,24 +23,36 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-echo 4. Processing PDF with default settings...
-python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output test_output/with_images --parts 3
+echo 4. Processing PDF with default settings (exact output directory)...
+python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output test_output/with_images --parts 3 --no-timestamps
 if %errorlevel% neq 0 (
     echo ❌ PDF processing failed!
     exit /b 1
 )
 
 echo.
-echo 5. Processing PDF without images...
-python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output test_output/no_images --no-images
+echo 5. Processing PDF without images (exact output directory)...
+python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output test_output/no_images --no-images --no-timestamps
 if %errorlevel% neq 0 (
     echo ❌ PDF processing without images failed!
     exit /b 1
 )
 
 echo.
+echo 6. Testing new timestamped subdirectory feature...
+python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output test_output/timestamped --no-images
+if %errorlevel% neq 0 (
+    echo ❌ Timestamped processing failed!
+    exit /b 1
+)
+
+echo.
 echo ✅ All tests completed successfully!
 echo Check the 'test_output/' directory for organized test results.
-echo   - test_output/with_images/ - Full processing with images
-echo   - test_output/no_images/ - Processing without embedded images
+echo   - test_output/with_images/ - Full processing with images (exact directory)
+echo   - test_output/no_images/ - Processing without embedded images (exact directory)
+echo   - test_output/timestamped/extraction_YYYYMMDD_HHMMSS/ - New timestamped subdirectory feature
+echo.
+echo Timestamped directory feature is now the DEFAULT behavior.
+echo Use --no-timestamps to create exact output directories when needed.
 pause

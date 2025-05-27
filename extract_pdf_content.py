@@ -681,6 +681,7 @@ def main(pdf_path: Optional[str] = None, config: Optional[Dict] = None, **kwargs
     """
     # Use default PDF file if none provided
     if pdf_path is None:
+        # Use sample PDF file for testing
         pdf_path = "samples/sample-pdf-with-images.pdf"
 
     # Load default config if none provided
@@ -691,10 +692,17 @@ def main(pdf_path: Optional[str] = None, config: Optional[Dict] = None, **kwargs
         validate_pdf_file(pdf_path)
     except PDFProcessingError as e:
         logger.error(e)
-        return
-    # Create timestamp for output directory
+        return  # Create timestamp for output directory
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = kwargs.get("output_dir", f"processed_data/extraction_{timestamp}")
+    base_output_dir = kwargs.get("output_dir", "processed_data")
+
+    # Always create timestamped subdirectories unless explicitly disabled
+    if kwargs.get("skip_timestamps", False):
+        output_dir = base_output_dir
+    else:
+        # Create timestamped subdirectory
+        timestamped_dirname = f"extraction_{timestamp}"
+        output_dir = os.path.join(base_output_dir, timestamped_dirname)
 
     logger.info("Starting PDF processing...")
     logger.info(f"PDF: {pdf_path}")
@@ -736,13 +744,17 @@ def main(pdf_path: Optional[str] = None, config: Optional[Dict] = None, **kwargs
 
         # Save combined JSON
         logger.info("\n4. Saving JSON metadata...")
-        save_json(text, image_metadata, output_dir, page_images_metadata)        # Split PDF into equal parts
+        save_json(
+            text, image_metadata, output_dir, page_images_metadata
+        )  # Split PDF into equal parts
         num_parts = kwargs.get(
             "num_parts", config.get("processing", {}).get("default_equal_parts", 4)
         )
         logger.info(f"\n5. Splitting PDF into {num_parts} equal parts...")
         equal_parts_dir = os.path.join(output_dir, "equal_parts")
-        split_output_dir = split_pdf_into_equal_parts(pdf_path, num_parts=num_parts, output_dir=equal_parts_dir)
+        split_output_dir = split_pdf_into_equal_parts(
+            pdf_path, num_parts=num_parts, output_dir=equal_parts_dir
+        )
 
         # Section-based splitting (unless disabled)
         section_info = []

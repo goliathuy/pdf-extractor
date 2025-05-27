@@ -11,6 +11,8 @@ A comprehensive PDF content extraction and intelligent splitting system that can
 - **Intelligent Section Splitting**: Use Table of Contents structure for smart splitting
 - **Fuzzy String Matching**: Intelligent section detection with confidence scoring
 - **JSON Metadata**: Complete extraction metadata and processing logs
+- **Automatic Timestamped Organization**: Default timestamped subdirectories for organized outputs
+- **CLI Interface**: Command-line tool with comprehensive options and help
 
 ## Installation
 
@@ -31,20 +33,100 @@ pip install PyMuPDF pdf2image
 
 ### Basic Usage
 
-```python
-python extract_pdf_content.py
+#### Command Line Interface (Recommended)
+
+```bash
+# Default: Automatic timestamped organization (NEW DEFAULT BEHAVIOR)
+python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output results
+# Creates: results/extraction_20250527_143022/
+
+# Process without embedded images
+python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output results --no-images
+# Creates: results/extraction_20250527_143055/
+
+# When you need exact output control (legacy behavior)
+python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output results --no-timestamps
+# Creates: results/ (directly in the folder)
+
+# Split into 3 equal parts with timestamped organization
+python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output results --parts 3
+# Creates: results/extraction_20250527_143122/equal_parts/
+
+# Validate PDF file
+python pdf_cli.py "samples/sample-pdf-with-images.pdf" --validate
+
+# View help and all options
+python pdf_cli.py --help
 ```
 
-The script will process the PDF file specified in the main function and create:
+### Timestamped vs Exact Output Examples
 
-1. **Text extraction** - `extracted_text.txt`
-2. **Image extraction** - `extracted_images/` folder
-3. **Page-to-image conversion** - `page_images/` folder with PNG files
-4. **JSON metadata** - `extracted_content.json`
-5. **Equal parts split** - Multiple PDF files (e.g., 4 equal parts)
-6. **Section-based split** - PDF files based on Table of Contents structure
+**🆕 Default Timestamped Behavior:**
+```bash
+python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output analysis
+```
+**Result:**
+```
+analysis/
+└── extraction_20250527_143022/
+    ├── extracted_text.txt
+    ├── page_images/
+    ├── equal_parts/
+    └── ... (all outputs organized here)
+```
+
+**📁 Exact Directory Control:**
+```bash
+python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output analysis --no-timestamps
+```
+**Result:**
+```
+analysis/
+├── extracted_text.txt
+├── page_images/
+├── equal_parts/
+└── ... (outputs directly in analysis/)
+```
+
+**💡 Why Use Timestamped (Default)?**
+- Multiple extractions don't overwrite each other
+- Easy to compare different processing runs
+- Chronological organization for project tracking
+- Perfect for experimentation and iterative work
+
+**💡 When to Use `--no-timestamps`?**
+- Integration with existing scripts that expect exact paths
+- When you only need one extraction result
+- Automated workflows that manage their own organization
 
 ### Output Structure
+
+#### With Timestamped Subdirectories (Default)
+
+```
+your_output_directory/
+└── extraction_YYYYMMDD_HHMMSS/
+    ├── extracted_text.txt
+    ├── extracted_images/
+    │   ├── image_001.png
+    │   └── ...
+    ├── page_images/
+    │   ├── page_001.png
+    │   ├── page_002.png
+    │   └── ...
+    ├── equal_parts/
+    │   ├── part_1_pages_1-N.pdf
+    │   ├── part_2_pages_N-M.pdf
+    │   └── ...
+    ├── extracted_content.json
+    ├── section_info.json
+    ├── processing_summary.json
+    ├── 01_Section_Name_pages_X-Y.pdf
+    ├── 02_Next_Section_pages_A-B.pdf
+    └── ...
+```
+
+#### With `--no-timestamps` Flag
 
 ```
 your_output_directory/

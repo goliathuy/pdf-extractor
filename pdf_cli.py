@@ -27,20 +27,21 @@ def parse_arguments():
 Examples:
   python pdf_cli.py document.pdf                    # Process with default settings
   python pdf_cli.py document.pdf --parts 6          # Split into 6 equal parts
-  python pdf_cli.py document.pdf --output ./results  # Custom output directory
+  python pdf_cli.py document.pdf --output ./results  # Custom output directory with timestamp
+  python pdf_cli.py document.pdf --output ./results --no-timestamps  # Exact output directory
   python pdf_cli.py document.pdf --no-images        # Skip image extraction
   python pdf_cli.py document.pdf --config my_config.json  # Use custom config
   python pdf_cli.py --test                          # Run unit tests
   python pdf_cli.py --batch batch_files.txt         # Process multiple files
-  python pdf_cli.py --analyze document.pdf          # Analyze PDF structure only
-        """
+  python pdf_cli.py --analyze document.pdf          # Analyze PDF structure only        """
     )
-    
+
     parser.add_argument('pdf_file', nargs='?', help='Path to the PDF file to process')
     parser.add_argument('--output', '-o', help='Output directory for processed files')
     parser.add_argument('--parts', '-p', type=int, help='Number of equal parts to split into')
     parser.add_argument('--no-images', action='store_true', help='Skip image extraction')
     parser.add_argument('--no-sections', action='store_true', help='Skip intelligent section splitting')
+    parser.add_argument('--no-timestamps', action='store_true', help='Skip automatic timestamped subdirectories')
     parser.add_argument('--config', '-c', default='config.json', help='Path to configuration file')
     parser.add_argument('--test', action='store_true', help='Run unit tests')
     parser.add_argument('--validate', '-v', action='store_true', help='Only validate the PDF file')
@@ -52,22 +53,22 @@ Examples:
     parser.add_argument('--format', choices=['text', 'json', 'xml'], default='text', help='Output format for extracted content')
     parser.add_argument('--threshold', type=int, help='White text color threshold (override config)')
     parser.add_argument('--verbose-errors', action='store_true', help='Include detailed error tracebacks in batch processing')
-    
+
     return parser.parse_args()
 
 def run_tests():
     """Run unit tests."""
     import unittest
     import test_pdf_extractor
-    
+
     # Create test suite
     loader = unittest.TestLoader()
     suite = loader.loadTestsFromModule(test_pdf_extractor)
-    
+
     # Run tests
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
-    
+
     # Return exit code based on test results
     return 0 if result.wasSuccessful() else 1
 
@@ -86,13 +87,13 @@ def show_memory_stats():
     try:
         from extract_pdf_content import optimize_memory_usage
         stats = optimize_memory_usage()
-        
+
         print("Memory Usage Statistics:")
         print(f"  RSS (Resident Set Size): {stats['rss_mb']:.1f} MB")
         print(f"  VMS (Virtual Memory Size): {stats['vms_mb']:.1f} MB")
         print(f"  Memory Percentage: {stats['percent']:.1f}%")
         print(f"  Available Memory: {stats['available_mb']:.1f} MB")
-        
+
     except ImportError:
         print("Memory monitoring requires 'psutil' package. Install with: pip install psutil")
 
@@ -100,7 +101,7 @@ def process_batch(batch_file, config, **kwargs):
     """Process multiple PDF files from a batch file with detailed error categorization."""
     import datetime
     import traceback
-    
+
     # Error categorization structure
     error_categories = {
         'file_not_found': [],
@@ -111,28 +112,28 @@ def process_batch(batch_file, config, **kwargs):
         'memory_errors': [],
         'unknown_errors': []
     }
-    
+
     success_results = []
-    
+
     if not os.path.exists(batch_file):
         print(f"❌ Batch file not found: {batch_file}")
         return 1
-    
+
     try:
         with open(batch_file, 'r') as f:
             pdf_files = [line.strip() for line in f.readlines() if line.strip()]
-        
+
         if not pdf_files:
             print("❌ No PDF files found in the batch file.")
             return 1
-        
+
         print(f"🚀 Starting batch processing of {len(pdf_files)} PDF files...")
         batch_start_time = datetime.datetime.now()
-        
+
         for idx, pdf_file in enumerate(pdf_files, 1):
             print(f"\n[{idx}/{len(pdf_files)}] Processing: {pdf_file}")
             file_start_time = datetime.datetime.now()
-            
+
             # Check if file exists
             if not os.path.exists(pdf_file):
                 error_info = {
@@ -143,7 +144,7 @@ def process_batch(batch_file, config, **kwargs):
                 error_categories['file_not_found'].append(error_info)
                 print(f"  ❌ File not found: {pdf_file}")
                 continue
-            
+
             # Check file permissions
             try:
                 with open(pdf_file, 'rb') as test_file:
@@ -166,14 +167,14 @@ def process_batch(batch_file, config, **kwargs):
                 error_categories['unknown_errors'].append(error_info)
                 print(f"  ❌ File access error: {pdf_file} - {e}")
                 continue
-            
+
             try:
                 # Validate PDF before processing
                 validate_pdf_file(pdf_file)
-                
+
                 # Process the PDF
                 result = extract_main(pdf_path=pdf_file, config=config, **kwargs)
-                
+
                 if result:
                     processing_time = (datetime.datetime.now() - file_start_time).total_seconds()
                     success_info = {
@@ -196,7 +197,7 @@ def process_batch(batch_file, config, **kwargs):
                     }
                     error_categories['processing_errors'].append(error_info)
                     print(f"  ❌ Processing failed (no result): {pdf_file}")
-                    
+
             except PDFProcessingError as e:
                 error_type = 'pdf_corruption' if 'corrupt' in str(e).lower() or 'invalid' in str(e).lower() else 'validation_errors'
                 error_info = {
@@ -208,7 +209,7 @@ def process_batch(batch_file, config, **kwargs):
                 }
                 error_categories[error_type].append(error_info)
                 print(f"  ❌ PDF validation/processing error: {pdf_file} - {e}")
-                
+
             except MemoryError as e:
                 error_info = {
                     'file': pdf_file,
@@ -219,7 +220,7 @@ def process_batch(batch_file, config, **kwargs):
                 }
                 error_categories['memory_errors'].append(error_info)
                 print(f"  ❌ Memory error: {pdf_file} - {e}")
-                
+
             except Exception as e:
                 # Categorize other exceptions
                 error_message = str(e).lower()
@@ -229,7 +230,7 @@ def process_batch(batch_file, config, **kwargs):
                     category = 'pdf_corruption'
                 else:
                     category = 'unknown_errors'
-                
+
                 error_info = {
                     'file': pdf_file,
                     'error': str(e),
@@ -240,11 +241,11 @@ def process_batch(batch_file, config, **kwargs):
                 }
                 error_categories[category].append(error_info)
                 print(f"  ❌ {type(e).__name__}: {pdf_file} - {e}")
-        
+
         # Generate detailed batch summary
         batch_end_time = datetime.datetime.now()
         total_processing_time = (batch_end_time - batch_start_time).total_seconds()
-        
+
         print(f"\n" + "="*60)
         print(f"📊 BATCH PROCESSING SUMMARY")
         print(f"="*60)
@@ -252,7 +253,7 @@ def process_batch(batch_file, config, **kwargs):
         print(f"📁 Total Files: {len(pdf_files)}")
         print(f"✅ Successfully Processed: {len(success_results)}")
         print(f"❌ Failed: {sum(len(errors) for errors in error_categories.values())}")
-        
+
         if success_results:
             avg_processing_time = sum(r['processing_time_seconds'] for r in success_results) / len(success_results)
             total_images = sum(r['image_count'] for r in success_results)
@@ -260,7 +261,7 @@ def process_batch(batch_file, config, **kwargs):
             print(f"📈 Average Processing Time: {avg_processing_time:.1f} seconds per file")
             print(f"🖼️  Total Images Extracted: {total_images}")
             print(f"📝 Total Text Characters: {total_text_length:,}")
-        
+
         # Display error breakdown
         print(f"\n📋 ERROR BREAKDOWN:")
         for category, errors in error_categories.items():
@@ -271,7 +272,7 @@ def process_batch(batch_file, config, **kwargs):
                     print(f"    - {os.path.basename(error['file'])}: {error['error']}")
                 if len(errors) > 3:
                     print(f"    ... and {len(errors) - 3} more files")
-        
+
         # Save detailed error report if there were errors
         total_errors = sum(len(errors) for errors in error_categories.values())
         if total_errors > 0:
@@ -287,15 +288,15 @@ def process_batch(batch_file, config, **kwargs):
                     'error_categories': error_categories,
                     'success_results': success_results
                 }
-                
+
                 with open(error_report_path, 'w', encoding='utf-8') as f:
                     json.dump(error_report, f, indent=2, ensure_ascii=False)
                 print(f"\n📄 Detailed error report saved: {error_report_path}")
             except Exception as e:
                 print(f"\n⚠️  Could not save error report: {e}")
-        
+
         return 0 if total_errors == 0 else 1
-    
+
     except Exception as e:
         print(f"❌ Critical error during batch processing: {e}")
         print(f"Traceback: {traceback.format_exc()}")
@@ -304,57 +305,57 @@ def process_batch(batch_file, config, **kwargs):
 def analyze_pdf_structure(pdf_path):
     """Analyze the structure of a PDF file without extracting content."""
     from extract_pdf_content import validate_pdf_file
-    
+
     try:
         validate_pdf_file(pdf_path)
-        
+
         import fitz
         doc = fitz.open(pdf_path)
-        
+
         # Get basic PDF info
         page_count = len(doc)
         metadata = doc.metadata
         toc = doc.get_toc()
-        
+
         # Sample some pages to check for images and text
         sample_pages = min(5, page_count)
         pages_with_images = 0
         pages_with_text = 0
         text_sample = ""
-        
+
         for i in range(sample_pages):
             page = doc[i]
-            
+
             # Check for images
             if page.get_images():
                 pages_with_images += 1
-            
+
             # Check for text
             text = page.get_text()
             if text.strip():
                 pages_with_text += 1
                 if len(text_sample) < 500:  # Get a small sample
                     text_sample += text[:100] + "...\n"
-        
+
         # Estimate content distribution
         if sample_pages > 0:
             image_percentage = (pages_with_images / sample_pages) * 100
             text_percentage = (pages_with_text / sample_pages) * 100
         else:
             image_percentage = text_percentage = 0
-        
+
         # Print analysis
         print("\n📊 PDF Structure Analysis")
         print("=" * 50)
         print(f"📄 File: {pdf_path}")
         print(f"📚 Pages: {page_count}")
-        
+
         if metadata:
             print("\n📝 Metadata:")
             for key, value in metadata.items():
                 if value:
                     print(f"  {key}: {value}")
-        
+
         if toc:
             print(f"\n📑 Table of Contents: {len(toc)} entries")
             for entry in toc[:5]:  # Show first 5 entries
@@ -363,11 +364,11 @@ def analyze_pdf_structure(pdf_path):
                 print(f"  ... and {len(toc) - 5} more entries")
         else:
             print("\n❌ No Table of Contents found")
-        
+
         print("\n📊 Content Analysis:")
         print(f"  Estimated images coverage: {image_percentage:.1f}%")
         print(f"  Estimated text coverage: {text_percentage:.1f}%")
-        
+
         print("\n📄 Text Sample:")
         if text_sample:
             lines = text_sample.split('\n')
@@ -376,14 +377,14 @@ def analyze_pdf_structure(pdf_path):
                     print(f"  {line}")
         else:
             print("  No text found in sample pages")
-        
+
         # Check if text might be white or hidden
         has_potential_hidden_text = False
         if sample_pages > 0:
             for i in range(min(3, sample_pages)):
                 page = doc[i]
                 dict_text = page.get_text("dict")
-                
+
                 for block in dict_text.get("blocks", []):
                     if block.get("type") == 0:  # Text block
                         for line in block.get("lines", []):
@@ -392,27 +393,27 @@ def analyze_pdf_structure(pdf_path):
                                 if color > 15000000:  # Possible white text
                                     has_potential_hidden_text = True
                                     break
-        
+
         if has_potential_hidden_text:
             print("\n⚠️ Warning: Document may contain hidden (white) text!")
-        
+
         print("\n🔍 Processing Recommendations:")
-        
+
         if not toc and page_count > 20:
             print("  • Consider using custom section detection (no TOC found)")
-        
+
         if image_percentage > 70:
             print("  • Document is image-heavy - OCR may be needed for text")
-        
+
         if has_potential_hidden_text:
             print("  • Enable white text filtering when extracting text")
-        
+
         if page_count > 100:
             print("  • Consider splitting into smaller parts for processing")
-        
+
         doc.close()
         return 0
-        
+
     except Exception as e:
         print(f"❌ Error analyzing PDF: {e}")
         import traceback
@@ -422,55 +423,55 @@ def analyze_pdf_structure(pdf_path):
 def main():
     """Main CLI function."""
     args = parse_arguments()
-    
+
     # Handle special commands
     if args.test:
         return run_tests()
-    
+
     if args.memory_stats:
         show_memory_stats()
         if not args.pdf_file:
             return 0
-    
+
     # Validate required arguments
     if not args.pdf_file:
         print("Error: PDF file argument is required (unless using --test)")
         return 1
-    
+
     if not os.path.exists(args.pdf_file):
         print(f"Error: PDF file '{args.pdf_file}' not found.")
         return 1
-    
+
     # Handle validation-only mode
     if args.validate:
         return validate_only(args.pdf_file)
-    
-    # Load configuration
+      # Load configuration
     config = load_config(args.config)
-      # Configure logging based on quiet flag
+
+    # Configure logging based on quiet flag
     if args.quiet:
         import logging
         logging.getLogger().setLevel(logging.WARNING)
-    
+
     try:
         # Build kwargs for the main function
         kwargs = {
             'skip_images': args.no_images,
             'skip_sections': args.no_sections,
+            'skip_timestamps': args.no_timestamps,
         }
-        
+
         if args.output:
             kwargs['output_dir'] = args.output
-        
+
         if args.parts:
             kwargs['num_parts'] = args.parts
-        
+
         print(f"Processing PDF: {args.pdf_file}")
         print(f"Configuration: {args.config}")
-        
+
         if args.output:
             print(f"Output directory: {args.output}")
-        
         if args.parts:
             print(f"Equal parts: {args.parts}")
         
@@ -480,9 +481,12 @@ def main():
         if args.no_sections:
             print("Section splitting: DISABLED")
         
+        if args.no_timestamps:
+            print("Automatic timestamped subdirectories: DISABLED")
+
         # Call the main function with parameters
         result = extract_main(pdf_path=args.pdf_file, config=config, **kwargs)
-        
+
         # Display results if available
         if result:
             print(f"\n📊 Processing Results:")
@@ -490,10 +494,10 @@ def main():
             print(f"   🖼️  Images Extracted: {result.get('image_count', 0)}")
             print(f"   📝 Text Length: {result.get('text_length', 0):,} characters")
             print(f"   📄 Sections Created: {result.get('section_count', 0)}")
-        
+
         print("\n✅ PDF processing completed successfully!")
         return 0
-        
+
     except PDFProcessingError as e:
         print(f"❌ PDF processing failed: {e}")
         return 1
