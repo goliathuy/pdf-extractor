@@ -332,6 +332,55 @@ class TestMemoryOptimization(unittest.TestCase):
           # Verify close was called
         mock_doc.close.assert_called()
 
+    @patch('extract_pdf_content.fitz.open')
+    @patch('glob.glob')
+    @patch('os.path.exists')
+    @patch('os.makedirs')
+    def test_combine_images_to_pdf(self, mock_makedirs, mock_exists, mock_glob, mock_fitz_open):
+        """Test combining page images into a PDF."""
+        from extract_pdf_content import combine_images_to_pdf
+        
+        # Mock directory existence
+        mock_exists.return_value = True
+        
+        # Mock image files
+        mock_image_files = [
+            'page_001.png',
+            'page_002.png', 
+            'page_003.png'
+        ]
+        mock_glob.return_value = mock_image_files
+        
+        # Mock PDF document
+        mock_doc = MagicMock()
+        mock_page = MagicMock()
+        mock_page.rect = MagicMock()
+        mock_doc.new_page.return_value = mock_page
+        mock_fitz_open.return_value = mock_doc
+        
+        # Test the function
+        result = combine_images_to_pdf(
+            images_dir=self.temp_dir,
+            output_dir=self.temp_dir
+        )
+        
+        # Verify function behavior
+        self.assertIsInstance(result, dict)
+        self.assertIn('output_file', result)
+        self.assertIn('page_count', result)
+        self.assertIn('file_size_mb', result)
+        self.assertIn('source_images', result)
+        self.assertIn('creation_time', result)
+        
+        # Verify page count matches our mock data
+        self.assertEqual(result['page_count'], 3)
+        self.assertEqual(result['source_images'], 3)
+        
+        # Verify PDF creation was attempted
+        mock_fitz_open.assert_called()
+        mock_doc.save.assert_called()
+        mock_doc.close.assert_called()
+
 if __name__ == '__main__':
     # Add the validation function to the main module for testing
     import extract_pdf_content

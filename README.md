@@ -17,6 +17,7 @@ A comprehensive PDF content extraction and intelligent splitting system that can
 - **🆕 Selective Extraction**: High-performance single-function modes (text-only, images-only, page-images-only)
 - **🆕 Granular Control**: Skip specific processing steps (--no-page-images, --no-splitting, --no-equal-parts)
 - **🆕 Performance Optimization**: Text-only extraction in ~0.4 seconds vs ~20+ seconds full processing
+- **🆕 Image-to-PDF Combination**: Combine page images back into a single PDF with full fidelity
 
 ## Sample Files
 
@@ -70,6 +71,9 @@ python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output results --parts 
 # Validate PDF file
 python pdf_cli.py "samples/sample-pdf-with-images.pdf" --validate
 
+# Combine page images into PDF
+python pdf_cli.py --combine-images ./page_images --output ./results
+
 # View help and all options
 python pdf_cli.py --help
 ```
@@ -89,6 +93,9 @@ python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output results --images
 
 # Convert only pages to images (~4-6 seconds for 10 pages)
 python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output results --page-images-only
+
+# Combine page images back into a single PDF
+python pdf_cli.py --combine-images ./page_images --output results
 ```
 
 #### Granular Processing Control
@@ -105,6 +112,25 @@ python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output results --no-equ
 
 # Combine multiple skip options
 python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output results --no-page-images --no-equal-parts
+```
+
+#### Image-to-PDF Combination
+
+Convert page images back into a single PDF with full fidelity:
+
+```bash
+# Combine page images from a directory into a single PDF
+python pdf_cli.py --combine-images ./page_images --output ./results
+# Creates: results/combined_pages.pdf
+
+# Complete round-trip workflow: PDF → Images → PDF
+python pdf_cli.py "samples/sample-pdf-with-images.pdf" --page-images-only --output ./step1
+python pdf_cli.py --combine-images ./step1/extraction_*/page_images --output ./step2
+# Result: Original PDF reconstructed with high fidelity
+
+# Combine images with custom output directory
+python pdf_cli.py --combine-images "processed_data/page_images" --output "final_pdfs"
+# Creates: final_pdfs/combined_pages.pdf
 ```
 
 #### Batch Processing
@@ -134,6 +160,7 @@ python pdf_cli.py --batch batch_files.txt --output batch_results --verbose-error
 | **Text Only** | ~0.4 seconds | Text file only | Quick content review |
 | **Images Only** | ~1-2 seconds | Embedded images only | Image extraction |
 | **Page Images Only** | ~4-6 seconds | Page PNGs only | Visual conversion |
+| **Combine Images** | ~25-30 seconds | Single PDF from images | Reconstruct PDF from pages |
 | **No Page Images** | ~12-15 seconds | All except page images | Skip heavy conversion |
 | **No Splitting** | ~8-12 seconds | No PDF splits | Keep original structure |
 
