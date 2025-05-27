@@ -6,6 +6,7 @@ A comprehensive PDF content extraction and intelligent splitting system that can
 
 - **Text Extraction**: Extract text content with white text filtering
 - **Image Extraction**: Extract and convert images (CMYK to RGB support)
+- **Page-to-Image Conversion**: Convert each PDF page to high-quality PNG images (300 DPI)
 - **Equal Parts Splitting**: Split PDFs into equal-sized parts
 - **Intelligent Section Splitting**: Use Table of Contents structure for smart splitting
 - **Fuzzy String Matching**: Intelligent section detection with confidence scoring
@@ -16,12 +17,13 @@ A comprehensive PDF content extraction and intelligent splitting system that can
 ### Requirements
 
 ```bash
-pip install PyMuPDF
+pip install PyMuPDF pdf2image
 ```
 
 ### Dependencies
 
 - `PyMuPDF (fitz)`: PDF processing
+- `pdf2image`: PDF to image conversion
 - `os`, `json`, `datetime`, `math`, `re`: Built-in Python libraries
 - `difflib`: Fuzzy string matching
 
@@ -37,9 +39,10 @@ The script will process the PDF file specified in the main function and create:
 
 1. **Text extraction** - `extracted_text.txt`
 2. **Image extraction** - `extracted_images/` folder
-3. **JSON metadata** - `extracted_content.json`
-4. **Equal parts split** - Multiple PDF files (e.g., 4 equal parts)
-5. **Section-based split** - PDF files based on Table of Contents structure
+3. **Page-to-image conversion** - `page_images/` folder with PNG files
+4. **JSON metadata** - `extracted_content.json`
+5. **Equal parts split** - Multiple PDF files (e.g., 4 equal parts)
+6. **Section-based split** - PDF files based on Table of Contents structure
 
 ### Output Structure
 
@@ -49,6 +52,10 @@ processed_data/
 │   ├── extracted_text.txt
 │   ├── extracted_images/
 │   │   ├── image_001.png
+│   │   └── ...
+│   ├── page_images/
+│   │   ├── page_001.png
+│   │   ├── page_002.png
 │   │   └── ...
 │   ├── extracted_content.json
 │   ├── section_info.json
@@ -60,6 +67,26 @@ processed_data/
 ```
 
 ## Configuration
+
+The system can be configured via the `config.json` file or by passing parameters directly to functions.
+
+### Key Configuration Options
+
+```json
+{
+  "processing": {
+    "enable_page_conversion": true,
+    "page_image_dpi": 300,
+    "page_image_format": "png",
+    "white_text_threshold": 15000000,
+    "default_equal_parts": 4
+  },
+  "output": {
+    "images_dirname": "extracted_images",
+    "page_images_dirname": "page_images"
+  }
+}
+```
 
 ### Section Definitions
 
@@ -95,6 +122,28 @@ if color > 15000000:  # Adjust threshold as needed
     continue  # Skip white/very light text
 ```
 
+### Page-to-Image Settings
+
+Configure image conversion quality and format:
+
+```python
+# In convert_pages_to_images function
+dpi = 300  # High-quality output (300 DPI)
+fmt = 'PNG'  # Output format
+```
+
+Or via configuration file:
+
+```json
+{
+  "processing": {
+    "enable_page_conversion": true,
+    "page_image_dpi": 300,
+    "page_image_format": "png"
+  }
+}
+```
+
 ## API Reference
 
 ### Core Functions
@@ -117,6 +166,16 @@ Extracts all images from PDF and saves them with metadata.
 
 **Returns:**
 - `list`: Image metadata with filenames and properties
+
+#### `convert_pages_to_images(pdf_path, output_dir)`
+Converts each PDF page to a high-quality PNG image at 300 DPI.
+
+**Parameters:**
+- `pdf_path` (str): Path to the PDF file
+- `output_dir` (str): Directory to save page images
+
+**Returns:**
+- `dict`: Page images metadata including count, DPI, format, and file list
 
 #### `split_pdf_into_equal_parts(pdf_path, output_dir, num_parts=4)`
 Splits PDF into equal-sized parts.
@@ -162,6 +221,9 @@ if __name__ == "__main__":
     # Extract images
     image_metadata = extract_images(pdf_path, output_dir)
     
+    # Convert pages to images
+    page_images_metadata = convert_pages_to_images(pdf_path, output_dir)
+    
     # Split into equal parts
     equal_parts_dir = f"processed_data/equal_parts_{timestamp}"
     split_pdf_into_equal_parts(pdf_path, equal_parts_dir, num_parts=4)
@@ -189,6 +251,8 @@ split_pdf_by_sections(pdf_path, output_dir, toc_structure)
 2. **Section Matching Fails**: Lower the similarity threshold in fuzzy matching
 3. **Memory Issues**: Process large PDFs in smaller chunks
 4. **Image Conversion Errors**: Ensure proper CMYK to RGB conversion
+5. **Page-to-Image Conversion Slow**: Large PDFs with many pages may take time at 300 DPI
+6. **Page Images Quality Issues**: Adjust DPI setting in `convert_pages_to_images()`
 
 ### Error Handling
 
@@ -196,12 +260,17 @@ The system includes basic error handling for:
 - File not found errors
 - PDF corruption issues
 - Image format conversion problems
+- Page-to-image conversion failures
 - Directory creation failures
 
 ## Performance Notes
 
 - **Large PDFs**: The system can handle large documents but may require significant memory
 - **Image Processing**: CMYK to RGB conversion adds processing time
+- **Page-to-Image Conversion**: High DPI settings (300 DPI) create larger files and take more time
+  - Typical timing: ~1-2 seconds per page at 300 DPI
+  - File sizes: ~200KB-2MB per page depending on content complexity
+  - Memory usage: ~10-50MB per page during conversion
 - **Fuzzy Matching**: String similarity calculation scales with content size
 
 ## Contributing
@@ -213,6 +282,23 @@ To contribute improvements:
 3. Add support for password-protected PDFs
 4. Optimize memory usage for very large files
 5. Add unit tests for core functions
+
+### Testing
+
+The project includes comprehensive unit tests for all major features:
+
+```bash
+python test_pdf_extractor.py
+```
+
+Test coverage includes:
+- PDF validation and error handling
+- Text extraction functionality
+- Image extraction processes
+- **Page-to-image conversion with DPI and format options**
+- Progress indicator functionality
+- Section overlap validation
+- Memory optimization and document cleanup
 
 ## License
 

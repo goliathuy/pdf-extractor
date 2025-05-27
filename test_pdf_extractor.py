@@ -93,51 +93,116 @@ class TestPDFExtractor(unittest.TestCase):
     
     def test_progress_indicator(self):
         """Test progress indicator functionality."""
-        progress = ProgressIndicator(10, "Testing")
-        
-        # Test initialization
-        self.assertEqual(progress.total_items, 10)
+        # Test basic functionality
+        progress = ProgressIndicator(5, "Test Progress")
         self.assertEqual(progress.current_item, 0)
-        self.assertEqual(progress.description, "Testing")
+        self.assertEqual(progress.total_items, 5)
         
         # Test update
-        progress.update(5)
-        self.assertEqual(progress.current_item, 5)
+        progress.update(2)
+        self.assertEqual(progress.current_item, 2)
         
         # Test completion
-        progress.update(5)
-        self.assertEqual(progress.current_item, 10)
+        progress.update(3)
+        self.assertEqual(progress.current_item, 5)
+    
+    @patch('extract_pdf_content.fitz.open')
+    @patch('os.makedirs')
+    @patch('os.path.getsize')
+    def test_convert_pages_to_images(self, mock_getsize, mock_makedirs, mock_fitz_open):
+        """Test page-to-image conversion functionality."""
+        # Mock PDF document
+        mock_doc = MagicMock()
+        mock_doc.__len__.return_value = 2  # 2 pages
+        mock_fitz_open.return_value = mock_doc
+        
+        # Mock pages
+        mock_page1 = MagicMock()
+        mock_page2 = MagicMock()
+        mock_doc.__getitem__.side_effect = [mock_page1, mock_page2]
+        
+        # Mock pixmaps
+        mock_pix1 = MagicMock()
+        mock_pix1.width = 2550
+        mock_pix1.height = 3300
+        mock_pix2 = MagicMock()
+        mock_pix2.width = 2550
+        mock_pix2.height = 3300
+        
+        mock_page1.get_pixmap.return_value = mock_pix1
+        mock_page2.get_pixmap.return_value = mock_pix2
+        
+        # Mock file size
+        mock_getsize.return_value = 500000  # 500KB
+        
+        # Import function to test
+        from extract_pdf_content import convert_pages_to_images
+        
+        # Test conversion
+        output_dir = self.temp_dir
+        result = convert_pages_to_images("test.pdf", output_dir, dpi=300, image_format="png")
+        
+        # Verify results
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["page_number"], 1)
+        self.assertEqual(result[1]["page_number"], 2)
+        self.assertEqual(result[0]["dpi"], 300)
+        self.assertEqual(result[0]["format"], "png")
+        self.assertEqual(result[0]["width"], 2550)
+        self.assertEqual(result[0]["height"], 3300)
+        
+        # Verify directory creation
+        mock_makedirs.assert_called()
+        
+        # Verify PDF operations
+        mock_fitz_open.assert_called_with("test.pdf")
+        mock_doc.close.assert_called()
+          # Verify pixmap operations
+        mock_pix1.save.assert_called()
+        mock_pix2.save.assert_called()
 
-class TestSectionOverlapValidation(unittest.TestCase):
-    """Test section overlap validation functionality."""
-    
-    def test_validate_no_overlaps(self):
-        """Test validation when sections don't overlap."""
-        sections = [
+    def test_validate_section_overlaps(self):
+        """Test section overlap validation."""
+        # Test valid sections (no overlaps)
+        valid_sections = [
             {"title": "Section 1", "start_page": 1, "end_page": 10},
-            {"title": "Section 2", "start_page": 11, "end_page": 20},
-            {"title": "Section 3", "start_page": 21, "end_page": 30}
+            {"title": "Section 2", "start_page": 11, "end_page": 20}
         ]
+        result = validate_section_overlaps(valid_sections)
+        self.assertEqual(len(result), 0)  # No overlaps expected
         
-        overlaps = validate_section_overlaps(sections)
-        self.assertEqual(len(overlaps), 0)
-    
-    def test_validate_with_overlaps(self):
-        """Test validation when sections overlap."""
-        sections = [
+        # Test overlapping sections
+        overlapping_sections = [
             {"title": "Section 1", "start_page": 1, "end_page": 15},
-            {"title": "Section 2", "start_page": 10, "end_page": 25},
-            {"title": "Section 3", "start_page": 20, "end_page": 30}
+            {"title": "Section 2", "start_page": 10, "end_page": 20}
         ]
+        result = validate_section_overlaps(overlapping_sections)
+        self.assertEqual(len(result), 1)  # One overlap expected
+        self.assertEqual(result[0]["section1"], "Section 1")
+        self.assertEqual(result[0]["section2"], "Section 2")
+        self.assertEqual(result[0]["overlap_pages"], "10-15")
+
+    @patch('extract_pdf_content.fitz.open')
+    def test_error_handling_in_convert_pages_to_images(self, mock_fitz_open):
+        """Test error handling in page conversion."""
+        # Mock PDF document with error
+        mock_doc = MagicMock()
+        mock_doc.__len__.return_value = 1
+        mock_fitz_open.return_value = mock_doc
         
-        overlaps = validate_section_overlaps(sections)
-        self.assertGreater(len(overlaps), 0)
+        # Mock page that raises exception
+        mock_page = MagicMock()
+        mock_page.get_pixmap.side_effect = Exception("Test error")
+        mock_doc.__getitem__.return_value = mock_page
         
-        # Check that overlap details are provided
-        overlap = overlaps[0]
-        self.assertIn("section1", overlap)
-        self.assertIn("section2", overlap)
-        self.assertIn("overlap_pages", overlap)
+        from extract_pdf_content import convert_pages_to_images
+        
+        # Should handle errors gracefully
+        result = convert_pages_to_images("test.pdf", self.temp_dir)
+        
+        # Should return empty list due to error
+        self.assertEqual(len(result), 0)
+        mock_doc.close.assert_called()
 
 def validate_section_overlaps(sections):
     """
