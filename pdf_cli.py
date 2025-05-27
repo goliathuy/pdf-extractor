@@ -7,16 +7,22 @@ import argparse
 import os
 import sys
 import json
-from extract_pdf_content import main as extract_main, validate_pdf_file, PDFProcessingError
+from extract_pdf_content import (
+    main as extract_main,
+    validate_pdf_file,
+    PDFProcessingError,
+)
+
 
 def load_config(config_path="config.json"):
     """Load configuration from JSON file."""
     if os.path.exists(config_path):
-        with open(config_path, 'r') as f:
+        with open(config_path, "r") as f:
             return json.load(f)
     else:
         print(f"Warning: Config file {config_path} not found. Using defaults.")
         return {}
+
 
 def parse_arguments():
     """Parse command line arguments."""
@@ -29,32 +35,112 @@ Examples:
   python pdf_cli.py document.pdf --parts 6          # Split into 6 equal parts
   python pdf_cli.py document.pdf --output ./results  # Custom output directory with timestamp
   python pdf_cli.py document.pdf --output ./results --no-timestamps  # Exact output directory
-  python pdf_cli.py document.pdf --no-images        # Skip image extraction
+
+  # Single component extraction (fastest)
+  python pdf_cli.py document.pdf --text-only        # Extract only text content
+  python pdf_cli.py document.pdf --images-only      # Extract only embedded images
+  python pdf_cli.py document.pdf --page-images-only # Convert only pages to images
+
+  # Skip specific components
+  python pdf_cli.py document.pdf --no-images        # Skip embedded image extraction
+  python pdf_cli.py document.pdf --no-page-images   # Skip page-to-image conversion
+  python pdf_cli.py document.pdf --no-splitting     # Skip all PDF splitting
+  python pdf_cli.py document.pdf --no-sections      # Skip section splitting only
+  python pdf_cli.py document.pdf --no-equal-parts   # Skip equal parts splitting only
+
+  # Other options
   python pdf_cli.py document.pdf --config my_config.json  # Use custom config
   python pdf_cli.py --test                          # Run unit tests
   python pdf_cli.py --batch batch_files.txt         # Process multiple files
-  python pdf_cli.py --analyze document.pdf          # Analyze PDF structure only        """
+  python pdf_cli.py --analyze document.pdf          # Analyze PDF structure only        """,
     )
 
-    parser.add_argument('pdf_file', nargs='?', help='Path to the PDF file to process')
-    parser.add_argument('--output', '-o', help='Output directory for processed files')
-    parser.add_argument('--parts', '-p', type=int, help='Number of equal parts to split into')
-    parser.add_argument('--no-images', action='store_true', help='Skip image extraction')
-    parser.add_argument('--no-sections', action='store_true', help='Skip intelligent section splitting')
-    parser.add_argument('--no-timestamps', action='store_true', help='Skip automatic timestamped subdirectories')
-    parser.add_argument('--config', '-c', default='config.json', help='Path to configuration file')
-    parser.add_argument('--test', action='store_true', help='Run unit tests')
-    parser.add_argument('--validate', '-v', action='store_true', help='Only validate the PDF file')
-    parser.add_argument('--quiet', '-q', action='store_true', help='Suppress progress output')
-    parser.add_argument('--memory-stats', action='store_true', help='Show memory usage statistics')
-    parser.add_argument('--batch', help='Process multiple PDF files from a text file (one file path per line)')
-    parser.add_argument('--analyze', action='store_true', help='Analyze PDF structure and metadata only')
-    parser.add_argument('--dry-run', action='store_true', help='Show what would be processed without actual processing')
-    parser.add_argument('--format', choices=['text', 'json', 'xml'], default='text', help='Output format for extracted content')
-    parser.add_argument('--threshold', type=int, help='White text color threshold (override config)')
-    parser.add_argument('--verbose-errors', action='store_true', help='Include detailed error tracebacks in batch processing')
+    parser.add_argument("pdf_file", nargs="?", help="Path to the PDF file to process")
+    parser.add_argument("--output", "-o", help="Output directory for processed files")
+    parser.add_argument(
+        "--parts", "-p", type=int, help="Number of equal parts to split into"
+    )
+
+    # Individual component control
+    parser.add_argument(
+        "--no-images", action="store_true", help="Skip embedded image extraction"
+    )
+    parser.add_argument(
+        "--no-page-images", action="store_true", help="Skip page-to-image conversion"
+    )
+    parser.add_argument(
+        "--no-splitting",
+        action="store_true",
+        help="Skip PDF splitting (both equal parts and sections)",
+    )
+    parser.add_argument(
+        "--no-sections",
+        action="store_true",
+        help="Skip intelligent section splitting only",
+    )
+    parser.add_argument(
+        "--no-equal-parts", action="store_true", help="Skip equal parts splitting only"
+    )
+
+    # Extraction-only modes
+    parser.add_argument(
+        "--text-only", action="store_true", help="Extract only text content (fastest)"
+    )
+    parser.add_argument(
+        "--images-only", action="store_true", help="Extract only embedded images"
+    )
+    parser.add_argument(
+        "--page-images-only", action="store_true", help="Convert only pages to images"
+    )
+
+    # Other options
+    parser.add_argument(
+        "--no-timestamps",
+        action="store_true",
+        help="Skip automatic timestamped subdirectories",
+    )
+    parser.add_argument(
+        "--config", "-c", default="config.json", help="Path to configuration file"
+    )
+    parser.add_argument("--test", action="store_true", help="Run unit tests")
+    parser.add_argument(
+        "--validate", "-v", action="store_true", help="Only validate the PDF file"
+    )
+    parser.add_argument(
+        "--quiet", "-q", action="store_true", help="Suppress progress output"
+    )
+    parser.add_argument(
+        "--memory-stats", action="store_true", help="Show memory usage statistics"
+    )
+    parser.add_argument(
+        "--batch",
+        help="Process multiple PDF files from a text file (one file path per line)",
+    )
+    parser.add_argument(
+        "--analyze", action="store_true", help="Analyze PDF structure and metadata only"
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be processed without actual processing",
+    )
+    parser.add_argument(
+        "--format",
+        choices=["text", "json", "xml"],
+        default="text",
+        help="Output format for extracted content",
+    )
+    parser.add_argument(
+        "--threshold", type=int, help="White text color threshold (override config)"
+    )
+    parser.add_argument(
+        "--verbose-errors",
+        action="store_true",
+        help="Include detailed error tracebacks in batch processing",
+    )
 
     return parser.parse_args()
+
 
 def run_tests():
     """Run unit tests."""
@@ -72,6 +158,7 @@ def run_tests():
     # Return exit code based on test results
     return 0 if result.wasSuccessful() else 1
 
+
 def validate_only(pdf_file):
     """Only validate the PDF file."""
     try:
@@ -82,10 +169,12 @@ def validate_only(pdf_file):
         print(f"❌ PDF validation failed: {e}")
         return 1
 
+
 def show_memory_stats():
     """Show current memory usage statistics."""
     try:
         from extract_pdf_content import optimize_memory_usage
+
         stats = optimize_memory_usage()
 
         print("Memory Usage Statistics:")
@@ -95,7 +184,10 @@ def show_memory_stats():
         print(f"  Available Memory: {stats['available_mb']:.1f} MB")
 
     except ImportError:
-        print("Memory monitoring requires 'psutil' package. Install with: pip install psutil")
+        print(
+            "Memory monitoring requires 'psutil' package. Install with: pip install psutil"
+        )
+
 
 def process_batch(batch_file, config, **kwargs):
     """Process multiple PDF files from a batch file with detailed error categorization."""
@@ -104,13 +196,13 @@ def process_batch(batch_file, config, **kwargs):
 
     # Error categorization structure
     error_categories = {
-        'file_not_found': [],
-        'permission_denied': [],
-        'pdf_corruption': [],
-        'validation_errors': [],
-        'processing_errors': [],
-        'memory_errors': [],
-        'unknown_errors': []
+        "file_not_found": [],
+        "permission_denied": [],
+        "pdf_corruption": [],
+        "validation_errors": [],
+        "processing_errors": [],
+        "memory_errors": [],
+        "unknown_errors": [],
     }
 
     success_results = []
@@ -120,7 +212,7 @@ def process_batch(batch_file, config, **kwargs):
         return 1
 
     try:
-        with open(batch_file, 'r') as f:
+        with open(batch_file, "r") as f:
             pdf_files = [line.strip() for line in f.readlines() if line.strip()]
 
         if not pdf_files:
@@ -137,34 +229,34 @@ def process_batch(batch_file, config, **kwargs):
             # Check if file exists
             if not os.path.exists(pdf_file):
                 error_info = {
-                    'file': pdf_file,
-                    'error': 'File not found',
-                    'timestamp': datetime.datetime.now().isoformat()
+                    "file": pdf_file,
+                    "error": "File not found",
+                    "timestamp": datetime.datetime.now().isoformat(),
                 }
-                error_categories['file_not_found'].append(error_info)
+                error_categories["file_not_found"].append(error_info)
                 print(f"  ❌ File not found: {pdf_file}")
                 continue
 
             # Check file permissions
             try:
-                with open(pdf_file, 'rb') as test_file:
+                with open(pdf_file, "rb") as test_file:
                     test_file.read(1)  # Try to read one byte
             except PermissionError:
                 error_info = {
-                    'file': pdf_file,
-                    'error': 'Permission denied - cannot access file',
-                    'timestamp': datetime.datetime.now().isoformat()
+                    "file": pdf_file,
+                    "error": "Permission denied - cannot access file",
+                    "timestamp": datetime.datetime.now().isoformat(),
                 }
-                error_categories['permission_denied'].append(error_info)
+                error_categories["permission_denied"].append(error_info)
                 print(f"  ❌ Permission denied: {pdf_file}")
                 continue
             except Exception as e:
                 error_info = {
-                    'file': pdf_file,
-                    'error': f'File access error: {str(e)}',
-                    'timestamp': datetime.datetime.now().isoformat()
+                    "file": pdf_file,
+                    "error": f"File access error: {str(e)}",
+                    "timestamp": datetime.datetime.now().isoformat(),
                 }
-                error_categories['unknown_errors'].append(error_info)
+                error_categories["unknown_errors"].append(error_info)
                 print(f"  ❌ File access error: {pdf_file} - {e}")
                 continue
 
@@ -176,68 +268,92 @@ def process_batch(batch_file, config, **kwargs):
                 result = extract_main(pdf_path=pdf_file, config=config, **kwargs)
 
                 if result:
-                    processing_time = (datetime.datetime.now() - file_start_time).total_seconds()
+                    processing_time = (
+                        datetime.datetime.now() - file_start_time
+                    ).total_seconds()
                     success_info = {
-                        'file': pdf_file,
-                        'processing_time_seconds': processing_time,
-                        'timestamp': datetime.datetime.now().isoformat(),
-                        'output_dir': result.get('output_dir', 'N/A'),
-                        'image_count': result.get('image_count', 0),
-                        'text_length': result.get('text_length', 0),
-                        'section_count': result.get('section_count', 0)
+                        "file": pdf_file,
+                        "processing_time_seconds": processing_time,
+                        "timestamp": datetime.datetime.now().isoformat(),
+                        "output_dir": result.get("output_dir", "N/A"),
+                        "image_count": result.get("image_count", 0),
+                        "text_length": result.get("text_length", 0),
+                        "section_count": result.get("section_count", 0),
                     }
                     success_results.append(success_info)
-                    print(f"  ✅ Successfully processed: {pdf_file} ({processing_time:.1f}s)")
+                    print(
+                        f"  ✅ Successfully processed: {pdf_file} ({processing_time:.1f}s)"
+                    )
                 else:
                     error_info = {
-                        'file': pdf_file,
-                        'error': 'Processing returned no result',
-                        'timestamp': datetime.datetime.now().isoformat(),
-                        'processing_time_seconds': (datetime.datetime.now() - file_start_time).total_seconds()
+                        "file": pdf_file,
+                        "error": "Processing returned no result",
+                        "timestamp": datetime.datetime.now().isoformat(),
+                        "processing_time_seconds": (
+                            datetime.datetime.now() - file_start_time
+                        ).total_seconds(),
                     }
-                    error_categories['processing_errors'].append(error_info)
+                    error_categories["processing_errors"].append(error_info)
                     print(f"  ❌ Processing failed (no result): {pdf_file}")
 
             except PDFProcessingError as e:
-                error_type = 'pdf_corruption' if 'corrupt' in str(e).lower() or 'invalid' in str(e).lower() else 'validation_errors'
+                error_type = (
+                    "pdf_corruption"
+                    if "corrupt" in str(e).lower() or "invalid" in str(e).lower()
+                    else "validation_errors"
+                )
                 error_info = {
-                    'file': pdf_file,
-                    'error': str(e),
-                    'error_type': 'PDFProcessingError',
-                    'timestamp': datetime.datetime.now().isoformat(),
-                    'processing_time_seconds': (datetime.datetime.now() - file_start_time).total_seconds()
+                    "file": pdf_file,
+                    "error": str(e),
+                    "error_type": "PDFProcessingError",
+                    "timestamp": datetime.datetime.now().isoformat(),
+                    "processing_time_seconds": (
+                        datetime.datetime.now() - file_start_time
+                    ).total_seconds(),
                 }
                 error_categories[error_type].append(error_info)
                 print(f"  ❌ PDF validation/processing error: {pdf_file} - {e}")
 
             except MemoryError as e:
                 error_info = {
-                    'file': pdf_file,
-                    'error': f'Memory error: {str(e)}',
-                    'error_type': 'MemoryError',
-                    'timestamp': datetime.datetime.now().isoformat(),
-                    'processing_time_seconds': (datetime.datetime.now() - file_start_time).total_seconds()
+                    "file": pdf_file,
+                    "error": f"Memory error: {str(e)}",
+                    "error_type": "MemoryError",
+                    "timestamp": datetime.datetime.now().isoformat(),
+                    "processing_time_seconds": (
+                        datetime.datetime.now() - file_start_time
+                    ).total_seconds(),
                 }
-                error_categories['memory_errors'].append(error_info)
+                error_categories["memory_errors"].append(error_info)
                 print(f"  ❌ Memory error: {pdf_file} - {e}")
 
             except Exception as e:
                 # Categorize other exceptions
                 error_message = str(e).lower()
-                if 'memory' in error_message or 'out of memory' in error_message:
-                    category = 'memory_errors'
-                elif 'corrupt' in error_message or 'damaged' in error_message or 'invalid pdf' in error_message:
-                    category = 'pdf_corruption'
+                if "memory" in error_message or "out of memory" in error_message:
+                    category = "memory_errors"
+                elif (
+                    "corrupt" in error_message
+                    or "damaged" in error_message
+                    or "invalid pdf" in error_message
+                ):
+                    category = "pdf_corruption"
                 else:
-                    category = 'unknown_errors'
+                    category = "unknown_errors"
 
                 error_info = {
-                    'file': pdf_file,
-                    'error': str(e),
-                    'error_type': type(e).__name__,
-                    'timestamp': datetime.datetime.now().isoformat(),
-                    'processing_time_seconds': (datetime.datetime.now() - file_start_time).total_seconds(),
-                    'traceback': traceback.format_exc() if kwargs.get('verbose_errors', False) else None
+                    "file": pdf_file,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "timestamp": datetime.datetime.now().isoformat(),
+                    "processing_time_seconds": (
+                        datetime.datetime.now() - file_start_time
+                    ).total_seconds(),
+                    "traceback": (
+                        traceback.format_exc()
+                        if kwargs.get("verbose_errors", False)
+                        else None
+                    ),
                 }
                 error_categories[category].append(error_info)
                 print(f"  ❌ {type(e).__name__}: {pdf_file} - {e}")
@@ -246,19 +362,23 @@ def process_batch(batch_file, config, **kwargs):
         batch_end_time = datetime.datetime.now()
         total_processing_time = (batch_end_time - batch_start_time).total_seconds()
 
-        print(f"\n" + "="*60)
+        print(f"\n" + "=" * 60)
         print(f"📊 BATCH PROCESSING SUMMARY")
-        print(f"="*60)
+        print(f"=" * 60)
         print(f"⏱️  Total Processing Time: {total_processing_time:.1f} seconds")
         print(f"📁 Total Files: {len(pdf_files)}")
         print(f"✅ Successfully Processed: {len(success_results)}")
         print(f"❌ Failed: {sum(len(errors) for errors in error_categories.values())}")
 
         if success_results:
-            avg_processing_time = sum(r['processing_time_seconds'] for r in success_results) / len(success_results)
-            total_images = sum(r['image_count'] for r in success_results)
-            total_text_length = sum(r['text_length'] for r in success_results)
-            print(f"📈 Average Processing Time: {avg_processing_time:.1f} seconds per file")
+            avg_processing_time = sum(
+                r["processing_time_seconds"] for r in success_results
+            ) / len(success_results)
+            total_images = sum(r["image_count"] for r in success_results)
+            total_text_length = sum(r["text_length"] for r in success_results)
+            print(
+                f"📈 Average Processing Time: {avg_processing_time:.1f} seconds per file"
+            )
             print(f"🖼️  Total Images Extracted: {total_images}")
             print(f"📝 Total Text Characters: {total_text_length:,}")
 
@@ -266,7 +386,7 @@ def process_batch(batch_file, config, **kwargs):
         print(f"\n📋 ERROR BREAKDOWN:")
         for category, errors in error_categories.items():
             if errors:
-                category_name = category.replace('_', ' ').title()
+                category_name = category.replace("_", " ").title()
                 print(f"  {category_name}: {len(errors)} files")
                 for error in errors[:3]:  # Show first 3 errors of each type
                     print(f"    - {os.path.basename(error['file'])}: {error['error']}")
@@ -276,20 +396,22 @@ def process_batch(batch_file, config, **kwargs):
         # Save detailed error report if there were errors
         total_errors = sum(len(errors) for errors in error_categories.values())
         if total_errors > 0:
-            error_report_path = f"batch_error_report_{batch_start_time.strftime('%Y%m%d_%H%M%S')}.json"
+            error_report_path = (
+                f"batch_error_report_{batch_start_time.strftime('%Y%m%d_%H%M%S')}.json"
+            )
             try:
                 error_report = {
-                    'batch_start_time': batch_start_time.isoformat(),
-                    'batch_end_time': batch_end_time.isoformat(),
-                    'total_processing_time_seconds': total_processing_time,
-                    'total_files': len(pdf_files),
-                    'successful_files': len(success_results),
-                    'failed_files': total_errors,
-                    'error_categories': error_categories,
-                    'success_results': success_results
+                    "batch_start_time": batch_start_time.isoformat(),
+                    "batch_end_time": batch_end_time.isoformat(),
+                    "total_processing_time_seconds": total_processing_time,
+                    "total_files": len(pdf_files),
+                    "successful_files": len(success_results),
+                    "failed_files": total_errors,
+                    "error_categories": error_categories,
+                    "success_results": success_results,
                 }
 
-                with open(error_report_path, 'w', encoding='utf-8') as f:
+                with open(error_report_path, "w", encoding="utf-8") as f:
                     json.dump(error_report, f, indent=2, ensure_ascii=False)
                 print(f"\n📄 Detailed error report saved: {error_report_path}")
             except Exception as e:
@@ -302,6 +424,7 @@ def process_batch(batch_file, config, **kwargs):
         print(f"Traceback: {traceback.format_exc()}")
         return 1
 
+
 def analyze_pdf_structure(pdf_path):
     """Analyze the structure of a PDF file without extracting content."""
     from extract_pdf_content import validate_pdf_file
@@ -310,6 +433,7 @@ def analyze_pdf_structure(pdf_path):
         validate_pdf_file(pdf_path)
 
         import fitz
+
         doc = fitz.open(pdf_path)
 
         # Get basic PDF info
@@ -371,7 +495,7 @@ def analyze_pdf_structure(pdf_path):
 
         print("\n📄 Text Sample:")
         if text_sample:
-            lines = text_sample.split('\n')
+            lines = text_sample.split("\n")
             for line in lines[:3]:
                 if line.strip():
                     print(f"  {line}")
@@ -417,8 +541,10 @@ def analyze_pdf_structure(pdf_path):
     except Exception as e:
         print(f"❌ Error analyzing PDF: {e}")
         import traceback
+
         print(traceback.format_exc())
         return 1
+
 
 def main():
     """Main CLI function."""
@@ -445,27 +571,67 @@ def main():
     # Handle validation-only mode
     if args.validate:
         return validate_only(args.pdf_file)
-      # Load configuration
+    # Load configuration
     config = load_config(args.config)
 
     # Configure logging based on quiet flag
     if args.quiet:
         import logging
-        logging.getLogger().setLevel(logging.WARNING)
 
+        logging.getLogger().setLevel(logging.WARNING)
     try:
         # Build kwargs for the main function
         kwargs = {
-            'skip_images': args.no_images,
-            'skip_sections': args.no_sections,
-            'skip_timestamps': args.no_timestamps,
+            "skip_images": args.no_images,
+            "skip_sections": args.no_sections,
+            "skip_timestamps": args.no_timestamps,
+            "skip_page_images": args.no_page_images,
+            "skip_splitting": args.no_splitting,
+            "skip_equal_parts": args.no_equal_parts,
         }
 
+        # Handle extraction-only modes
+        if args.text_only:
+            kwargs.update(
+                {
+                    "skip_images": True,
+                    "skip_page_images": True,
+                    "skip_splitting": True,
+                    "skip_sections": True,
+                    "skip_equal_parts": True,
+                }
+            )
+        elif args.images_only:
+            kwargs.update(
+                {
+                    "skip_page_images": True,
+                    "skip_splitting": True,
+                    "skip_sections": True,
+                    "skip_equal_parts": True,
+                    "text_only_mode": False,  # Still need text for processing but don't save separately
+                }
+            )
+        elif args.page_images_only:
+            kwargs.update(
+                {
+                    "skip_images": True,
+                    "skip_splitting": True,
+                    "skip_sections": True,
+                    "skip_equal_parts": True,
+                    "text_only_mode": False,  # Still need text for processing but don't save separately
+                }
+            )
+
+        # Handle skip_splitting override (affects both equal parts and sections)
+        if args.no_splitting:
+            kwargs["skip_sections"] = True
+            kwargs["skip_equal_parts"] = True
+
         if args.output:
-            kwargs['output_dir'] = args.output
+            kwargs["output_dir"] = args.output
 
         if args.parts:
-            kwargs['num_parts'] = args.parts
+            kwargs["num_parts"] = args.parts
 
         print(f"Processing PDF: {args.pdf_file}")
         print(f"Configuration: {args.config}")
@@ -474,15 +640,32 @@ def main():
             print(f"Output directory: {args.output}")
         if args.parts:
             print(f"Equal parts: {args.parts}")
-        
-        if args.no_images:
-            print("Image extraction: DISABLED")
-        
-        if args.no_sections:
-            print("Section splitting: DISABLED")
-        
-        if args.no_timestamps:
-            print("Automatic timestamped subdirectories: DISABLED")
+
+        # Display extraction mode information
+        if args.text_only:
+            print("Mode: TEXT-ONLY extraction (fastest)")
+        elif args.images_only:
+            print("Mode: IMAGES-ONLY extraction")
+        elif args.page_images_only:
+            print("Mode: PAGE-IMAGES-ONLY conversion")
+        else:
+            print("Mode: Full processing with selective options")
+
+            if args.no_images:
+                print("  Embedded image extraction: DISABLED")
+
+            if args.no_page_images:
+                print("  Page-to-image conversion: DISABLED")
+
+            if args.no_splitting:
+                print("  PDF splitting (all types): DISABLED")
+            elif args.no_sections:
+                print("  Section-based splitting: DISABLED")
+            elif args.no_equal_parts:
+                print("  Equal parts splitting: DISABLED")
+
+            if args.no_timestamps:
+                print("  Automatic timestamped subdirectories: DISABLED")
 
         # Call the main function with parameters
         result = extract_main(pdf_path=args.pdf_file, config=config, **kwargs)
@@ -507,6 +690,7 @@ def main():
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -709,6 +709,87 @@ def main(pdf_path: Optional[str] = None, config: Optional[Dict] = None, **kwargs
     logger.info(f"Output directory: {output_dir}")
     logger.info("")
     try:
+        # Check for extraction-only modes
+        if kwargs.get('skip_images') and kwargs.get('skip_page_images') and kwargs.get('skip_splitting'):
+            # TEXT-ONLY mode
+            logger.info("1. Extracting text (TEXT-ONLY mode)...")
+            color_threshold = config.get("processing", {}).get(
+                "white_text_threshold", 15000000
+            )
+            text = extract_text(pdf_path, color_threshold)
+            save_text(text, output_dir)
+            
+            # Create minimal JSON for text-only
+            logger.info("\n2. Saving text-only JSON metadata...")
+            save_json(text, [], output_dir, [])
+            
+            logger.info(f"\nText-only extraction complete!")
+            logger.info(f"Text content saved in: {output_dir}")
+            
+            return {
+                "output_dir": output_dir,
+                "text_length": len(text),
+                "mode": "text-only"
+            }
+            
+        elif not kwargs.get('skip_images') and kwargs.get('skip_page_images') and kwargs.get('skip_splitting'):
+            # IMAGES-ONLY mode
+            logger.info("1. Extracting embedded images (IMAGES-ONLY mode)...")
+            # Still need text for processing but don't save separately
+            color_threshold = config.get("processing", {}).get(
+                "white_text_threshold", 15000000
+            )
+            text = extract_text(pdf_path, color_threshold)
+            image_metadata = extract_images(pdf_path, output_dir)
+            
+            # Create minimal JSON for images-only
+            logger.info("\n2. Saving images-only JSON metadata...")
+            save_json("", image_metadata, output_dir, [])
+            
+            logger.info(f"\nImages-only extraction complete!")
+            logger.info(f"Images saved in: {output_dir}")
+            
+            return {
+                "output_dir": output_dir,
+                "image_count": len(image_metadata),
+                "mode": "images-only"
+            }
+            
+        elif kwargs.get('skip_images') and not kwargs.get('skip_page_images') and kwargs.get('skip_splitting'):
+            # PAGE-IMAGES-ONLY mode
+            logger.info("1. Converting pages to images (PAGE-IMAGES-ONLY mode)...")
+            # Still need text for processing but don't save separately
+            color_threshold = config.get("processing", {}).get(
+                "white_text_threshold", 15000000
+            )
+            text = extract_text(pdf_path, color_threshold)
+            
+            dpi = kwargs.get(
+                "page_image_dpi",
+                config.get("processing", {}).get("page_image_dpi", 300),
+            )
+            image_format = kwargs.get(
+                "page_image_format",
+                config.get("processing", {}).get("page_image_format", "png"),
+            )
+            page_images_metadata = convert_pages_to_images(
+                pdf_path, output_dir, dpi=dpi, image_format=image_format
+            )
+            
+            # Create minimal JSON for page-images-only
+            logger.info("\n2. Saving page-images-only JSON metadata...")
+            save_json("", [], output_dir, page_images_metadata)
+            
+            logger.info(f"\nPage-images-only conversion complete!")
+            logger.info(f"Page images saved in: {output_dir}")
+            
+            return {
+                "output_dir": output_dir,
+                "page_image_count": len(page_images_metadata),
+                "mode": "page-images-only"
+            }
+
+        # FULL PROCESSING MODE (with selective options)
         # Extract text
         logger.info("1. Extracting text...")
         color_threshold = config.get("processing", {}).get(
@@ -740,21 +821,25 @@ def main(pdf_path: Optional[str] = None, config: Optional[Dict] = None, **kwargs
                 pdf_path, output_dir, dpi=dpi, image_format=image_format
             )
         else:
-            logger.info("\n3. Skipping page-to-image conversion (disabled)")
-
-        # Save combined JSON
+            logger.info("\n3. Skipping page-to-image conversion (disabled)")        # Save combined JSON
         logger.info("\n4. Saving JSON metadata...")
         save_json(
             text, image_metadata, output_dir, page_images_metadata
-        )  # Split PDF into equal parts
-        num_parts = kwargs.get(
-            "num_parts", config.get("processing", {}).get("default_equal_parts", 4)
         )
-        logger.info(f"\n5. Splitting PDF into {num_parts} equal parts...")
-        equal_parts_dir = os.path.join(output_dir, "equal_parts")
-        split_output_dir = split_pdf_into_equal_parts(
-            pdf_path, num_parts=num_parts, output_dir=equal_parts_dir
-        )
+
+        # Split PDF into equal parts (unless disabled)
+        split_output_dir = None
+        if not kwargs.get("skip_equal_parts", False):
+            num_parts = kwargs.get(
+                "num_parts", config.get("processing", {}).get("default_equal_parts", 4)
+            )
+            logger.info(f"\n5. Splitting PDF into {num_parts} equal parts...")
+            equal_parts_dir = os.path.join(output_dir, "equal_parts")
+            split_output_dir = split_pdf_into_equal_parts(
+                pdf_path, num_parts=num_parts, output_dir=equal_parts_dir
+            )
+        else:
+            logger.info("\n5. Skipping equal parts splitting (disabled)")
 
         # Section-based splitting (unless disabled)
         section_info = []

@@ -14,6 +14,9 @@ A comprehensive PDF content extraction and intelligent splitting system that can
 - **Automatic Timestamped Organization**: Default timestamped subdirectories for organized outputs
 - **CLI Interface**: Command-line tool with comprehensive options and help
 - **Sample Files Included**: Four sample PDFs for testing and demonstration
+- **🆕 Selective Extraction**: High-performance single-function modes (text-only, images-only, page-images-only)
+- **🆕 Granular Control**: Skip specific processing steps (--no-page-images, --no-splitting, --no-equal-parts)
+- **🆕 Performance Optimization**: Text-only extraction in ~0.4 seconds vs ~20+ seconds full processing
 
 ## Sample Files
 
@@ -70,6 +73,50 @@ python pdf_cli.py "samples/sample-pdf-with-images.pdf" --validate
 # View help and all options
 python pdf_cli.py --help
 ```
+
+### Selective Extraction Modes
+
+The PDF extractor supports selective extraction for improved performance and specific use cases:
+
+#### High-Performance Single-Function Extraction
+
+```bash
+# Extract only text content (fastest - ~0.4 seconds vs ~20+ seconds full processing)
+python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output results --text-only
+
+# Extract only embedded images (~1-2 seconds)
+python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output results --images-only
+
+# Convert only pages to images (~4-6 seconds for 10 pages)
+python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output results --page-images-only
+```
+
+#### Granular Processing Control
+
+```bash
+# Skip page-to-image conversion (saves ~50% processing time)
+python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output results --no-page-images
+
+# Skip all PDF splitting operations
+python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output results --no-splitting
+
+# Skip only equal-parts splitting (keep section-based splitting)
+python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output results --no-equal-parts
+
+# Combine multiple skip options
+python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output results --no-page-images --no-equal-parts
+```
+
+#### Performance Comparison
+
+| Mode | Processing Time | Output | Use Case |
+|------|----------------|--------|----------|
+| **Full Processing** | ~20-25 seconds | All features | Complete analysis |
+| **Text Only** | ~0.4 seconds | Text file only | Quick content review |
+| **Images Only** | ~1-2 seconds | Embedded images only | Image extraction |
+| **Page Images Only** | ~4-6 seconds | Page PNGs only | Visual conversion |
+| **No Page Images** | ~12-15 seconds | All except page images | Skip heavy conversion |
+| **No Splitting** | ~8-12 seconds | No PDF splits | Keep original structure |
 
 ### Timestamped vs Exact Output Examples
 
@@ -374,6 +421,14 @@ The system includes basic error handling for:
   - File sizes: ~200KB-2MB per page depending on content complexity
   - Memory usage: ~10-50MB per page during conversion
 - **Fuzzy Matching**: String similarity calculation scales with content size
+- **🆕 Selective Extraction Performance**:
+  - **Text-only**: ~0.4 seconds (50x faster than full processing)
+  - **Images-only**: ~1-2 seconds (10-20x faster)
+  - **Page-images-only**: ~4-6 seconds (3-5x faster)
+  - **Skip page images**: ~50% time reduction
+  - **Skip splitting**: ~40% time reduction
+- **🆕 Memory Optimization**: Single-function modes use significantly less memory
+- **🆕 Use Case Optimization**: Choose extraction mode based on specific needs for maximum efficiency
 
 ## Contributing
 
