@@ -107,6 +107,25 @@ python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output results --no-equ
 python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output results --no-page-images --no-equal-parts
 ```
 
+#### Batch Processing
+
+Process multiple PDF files efficiently:
+
+```bash
+# Create a batch file listing PDFs (one per line)
+echo "samples/sample-pdf-with-images.pdf" > batch_files.txt
+echo "samples/file-example_PDF_1MB.pdf" >> batch_files.txt
+
+# Process all files in batch
+python pdf_cli.py --batch batch_files.txt --output batch_results
+
+# Batch processing with selective extraction
+python pdf_cli.py --batch batch_files.txt --output batch_results --text-only
+
+# Include detailed error information for debugging
+python pdf_cli.py --batch batch_files.txt --output batch_results --verbose-errors
+```
+
 #### Performance Comparison
 
 | Mode | Processing Time | Output | Use Case |
