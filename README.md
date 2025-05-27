@@ -13,6 +13,18 @@ A comprehensive PDF content extraction and intelligent splitting system that can
 - **JSON Metadata**: Complete extraction metadata and processing logs
 - **Automatic Timestamped Organization**: Default timestamped subdirectories for organized outputs
 - **CLI Interface**: Command-line tool with comprehensive options and help
+- **Sample Files Included**: Four sample PDFs for testing and demonstration
+
+## Sample Files
+
+The project includes sample PDF files for testing and demonstration:
+
+- `samples/sample-pdf-with-images.pdf` - Multi-page PDF with images (3.9MB, 10 pages) - **Default test file**
+- `samples/file-example_PDF_1MB.pdf` - Standard PDF for basic testing (1MB)
+- `samples/image-based-pdf-sample.pdf` - Image-heavy PDF for image extraction testing
+- `samples/dummy.pdf` - Simple PDF for quick validation tests
+
+All examples in this documentation use the sample files, ensuring you can run them immediately after installation.
 
 ## Installation
 
