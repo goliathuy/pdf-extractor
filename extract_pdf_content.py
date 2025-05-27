@@ -886,13 +886,90 @@ def main(pdf_path: Optional[str] = None, config: Optional[Dict] = None, **kwargs
             "text_length": len(text),
             "section_count": len(section_info),
         }
-
     except Exception as e:
         logger.error(f"Unexpected error during processing: {str(e)}")
         import traceback
 
         logger.error(traceback.format_exc())
         raise PDFProcessingError(f"Processing failed: {str(e)}")
+
+
+def combine_images_to_pdf(images_dir: str, output_pdf_path: str) -> dict:
+    """
+    Combine all page images from a directory into a single PDF file.
+    
+    Args:
+        images_dir (str): Directory containing page images (PNG format)
+        output_pdf_path (str): Path where the combined PDF will be saved
+        
+    Returns:
+        dict: Metadata about the PDF creation process
+    """
+    try:
+        import glob
+        
+        # Find all PNG files in the directory
+        image_pattern = os.path.join(images_dir, "page_*.png")
+        image_files = sorted(glob.glob(image_pattern))
+        
+        if not image_files:
+            raise PDFProcessingError(f"No page images found in {images_dir}")
+        
+        logger.info(f"Found {len(image_files)} page images to combine")
+        logger.info(f"Creating PDF: {output_pdf_path}")
+        
+        # Create a new PDF document
+        pdf_doc = fitz.open()  # Create new empty PDF
+        
+        # Progress indicator
+        progress = ProgressIndicator(len(image_files), "Combining images to PDF")
+        
+        # Add each image as a page in the PDF
+        for i, image_path in enumerate(image_files):
+            try:
+                # Open the image
+                img_doc = fitz.open(image_path)
+                
+                # Convert image to PDF page
+                pdf_bytes = img_doc.convert_to_pdf()
+                img_pdf = fitz.open("pdf", pdf_bytes)
+                
+                # Insert the page into our main PDF
+                pdf_doc.insert_pdf(img_pdf)
+                
+                # Clean up
+                img_doc.close()
+                img_pdf.close()
+                
+                progress.update()
+                
+            except Exception as e:
+                logger.warning(f"Failed to add image {image_path}: {str(e)}")
+                continue
+        
+        # Save the combined PDF
+        pdf_doc.save(output_pdf_path)
+        pdf_doc.close()
+        
+        # Get file size
+        file_size = os.path.getsize(output_pdf_path)
+        file_size_mb = file_size / (1024 * 1024)
+        
+        logger.info(f"Combined PDF created successfully: {output_pdf_path}")
+        logger.info(f"PDF size: {file_size_mb:.2f} MB")
+        logger.info(f"Total pages: {len(image_files)}")
+        
+        return {
+            "output_file": output_pdf_path,
+            "page_count": len(image_files),
+            "file_size_mb": round(file_size_mb, 2),
+            "source_images": len(image_files),
+            "creation_time": datetime.datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error combining images to PDF: {str(e)}")
+        raise PDFProcessingError(f"Failed to combine images to PDF: {str(e)}")
 
 
 if __name__ == "__main__":

@@ -47,12 +47,14 @@ Examples:
   python pdf_cli.py document.pdf --no-splitting     # Skip all PDF splitting
   python pdf_cli.py document.pdf --no-sections      # Skip section splitting only
   python pdf_cli.py document.pdf --no-equal-parts   # Skip equal parts splitting only
-
   # Other options
   python pdf_cli.py document.pdf --config my_config.json  # Use custom config
   python pdf_cli.py --test                          # Run unit tests
   python pdf_cli.py --batch batch_files.txt         # Process multiple files
-  python pdf_cli.py --analyze document.pdf          # Analyze PDF structure only        """,
+  python pdf_cli.py --analyze document.pdf          # Analyze PDF structure only
+  
+  # Combine page images into PDF
+  python pdf_cli.py --combine-images ./page_images/ --output ./results  # Combine images to PDF""",
     )
 
     parser.add_argument("pdf_file", nargs="?", help="Path to the PDF file to process")
@@ -91,6 +93,12 @@ Examples:
     )
     parser.add_argument(
         "--page-images-only", action="store_true", help="Convert only pages to images"
+    )
+    
+    # PDF creation from images
+    parser.add_argument(
+        "--combine-images", 
+        help="Combine page images from a directory into a single PDF (provide directory path)"
     )
 
     # Other options
@@ -167,6 +175,45 @@ def validate_only(pdf_file):
         return 0
     except PDFProcessingError as e:
         print(f"❌ PDF validation failed: {e}")
+        return 1
+
+
+def combine_images_command(images_dir, output_dir=None):
+    """Combine page images from a directory into a single PDF."""
+    try:
+        from extract_pdf_content import combine_images_to_pdf
+        
+        # Validate input directory
+        if not os.path.exists(images_dir):
+            print(f"❌ Error: Images directory '{images_dir}' not found.")
+            return 1
+        
+        if not os.path.isdir(images_dir):
+            print(f"❌ Error: '{images_dir}' is not a directory.")
+            return 1
+        
+        # Determine output file path
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+            output_pdf = os.path.join(output_dir, "combined_pages.pdf")
+        else:
+            # Default to same directory as images
+            output_pdf = os.path.join(os.path.dirname(images_dir), "combined_pages.pdf")
+        
+        print(f"🔄 Combining page images from: {images_dir}")
+        print(f"📄 Output PDF: {output_pdf}")
+        
+        # Combine images to PDF
+        result = combine_images_to_pdf(images_dir, output_pdf)
+        
+        print(f"✅ Successfully created PDF with {result['page_count']} pages")
+        print(f"📊 File size: {result['file_size_mb']} MB")
+        print(f"📁 Saved to: {result['output_file']}")
+        
+        return 0
+        
+    except Exception as e:
+        print(f"❌ Error combining images to PDF: {e}")
         return 1
 
 
@@ -548,11 +595,13 @@ def analyze_pdf_structure(pdf_path):
 
 def main():
     """Main CLI function."""
-    args = parse_arguments()
-
-    # Handle special commands
+    args = parse_arguments()    # Handle special commands
     if args.test:
         return run_tests()
+    
+    # Handle combine images to PDF
+    if args.combine_images:
+        return combine_images_command(args.combine_images, args.output)
 
     if args.memory_stats:
         show_memory_stats()
