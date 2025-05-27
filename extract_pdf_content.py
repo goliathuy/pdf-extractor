@@ -736,13 +736,13 @@ def main(pdf_path: Optional[str] = None, config: Optional[Dict] = None, **kwargs
 
         # Save combined JSON
         logger.info("\n4. Saving JSON metadata...")
-        save_json(text, image_metadata, output_dir, page_images_metadata)
-        # Split PDF into equal parts
+        save_json(text, image_metadata, output_dir, page_images_metadata)        # Split PDF into equal parts
         num_parts = kwargs.get(
             "num_parts", config.get("processing", {}).get("default_equal_parts", 4)
         )
         logger.info(f"\n5. Splitting PDF into {num_parts} equal parts...")
-        split_output_dir = split_pdf_into_equal_parts(pdf_path, num_parts=num_parts)
+        equal_parts_dir = os.path.join(output_dir, "equal_parts")
+        split_output_dir = split_pdf_into_equal_parts(pdf_path, num_parts=num_parts, output_dir=equal_parts_dir)
 
         # Section-based splitting (unless disabled)
         section_info = []

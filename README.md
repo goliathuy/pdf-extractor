@@ -47,24 +47,32 @@ The script will process the PDF file specified in the main function and create:
 ### Output Structure
 
 ```
-processed_data/
-├── extraction_YYYYMMDD_HHMMSS/
-│   ├── extracted_text.txt
-│   ├── extracted_images/
-│   │   ├── image_001.png
-│   │   └── ...
-│   ├── page_images/
-│   │   ├── page_001.png
-│   │   ├── page_002.png
-│   │   └── ...
-│   ├── extracted_content.json
-│   ├── section_info.json
-│   ├── 01_Section_Name_pages_X-Y.pdf
+your_output_directory/
+├── extracted_text.txt
+├── extracted_images/
+│   ├── image_001.png
 │   └── ...
-└── equal_parts_YYYYMMDD_HHMMSS/
-    ├── part_1_pages_1-N.pdf
-    └── ...
+├── page_images/
+│   ├── page_001.png
+│   ├── page_002.png
+│   └── ...
+├── equal_parts/
+│   ├── part_1_pages_1-N.pdf
+│   ├── part_2_pages_N-M.pdf
+│   └── ...
+├── extracted_content.json
+├── section_info.json
+├── processing_summary.json
+├── 01_Section_Name_pages_X-Y.pdf
+├── 02_Next_Section_pages_A-B.pdf
+└── ...
 ```
+
+**Key improvements:**
+- All outputs are contained within your specified output directory
+- Equal parts PDFs are organized in an `equal_parts/` subdirectory
+- No more scattered timestamped directories across different locations
+- Consistent and logical organization for easy access
 
 ## Configuration
 

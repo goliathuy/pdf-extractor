@@ -24,7 +24,7 @@ if %errorlevel% neq 0 (
 
 echo.
 echo 4. Processing PDF with default settings...
-python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output test_output --parts 3
+python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output test_output/with_images --parts 3
 if %errorlevel% neq 0 (
     echo ❌ PDF processing failed!
     exit /b 1
@@ -32,7 +32,7 @@ if %errorlevel% neq 0 (
 
 echo.
 echo 5. Processing PDF without images...
-python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output test_output_no_images --no-images
+python pdf_cli.py "samples/sample-pdf-with-images.pdf" --output test_output/no_images --no-images
 if %errorlevel% neq 0 (
     echo ❌ PDF processing without images failed!
     exit /b 1
@@ -40,5 +40,7 @@ if %errorlevel% neq 0 (
 
 echo.
 echo ✅ All tests completed successfully!
-echo Check the 'test_output' and 'test_output_no_images' directories for results.
+echo Check the 'test_output/' directory for organized test results.
+echo   - test_output/with_images/ - Full processing with images
+echo   - test_output/no_images/ - Processing without embedded images
 pause

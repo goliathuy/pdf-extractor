@@ -1,3 +1,4 @@
+test_output/*
 processed_data/
 __pycache__
 *.pdf
