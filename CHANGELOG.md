@@ -52,3 +52,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **PDF Standards**: Full PyMuPDF compatibility
 - **Operating Systems**: Windows, macOS, Linux
 - **Performance**: Successfully tested with 112-page, 43MB PDF documents
+
+### Installation Notes
+- Package installation may show dependency conflict warnings with Streamlit and other packages
+- These conflicts are harmless and do not affect PDF processing functionality
+- The system works correctly with newer versions of Pillow (11.x) and packaging (25.x)
+- Conflicts occur due to other packages having stricter version requirements

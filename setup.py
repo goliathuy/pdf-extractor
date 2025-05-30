@@ -5,6 +5,9 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 # Read requirements
+# Note: Installation may show dependency conflicts with packages like Streamlit
+# that require older versions of Pillow (<11) and packaging (<24).
+# These conflicts are harmless and do not affect functionality.
 with open("requirements.txt", "r", encoding="utf-8") as fh:
     requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
 

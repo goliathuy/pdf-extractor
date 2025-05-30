@@ -45,6 +45,33 @@ pip install PyMuPDF pdf2image
 - `os`, `json`, `datetime`, `math`, `re`: Built-in Python libraries
 - `difflib`: Fuzzy string matching
 
+### Installation Notes
+
+#### Known Dependency Conflicts
+
+During installation, you may see dependency conflict warnings like:
+
+```
+ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+streamlit 1.32.0 requires packaging<24,>=16.8, but you have packaging 25.0 which is incompatible.
+streamlit 1.32.0 requires pillow<11,>=7.1.0, but you have pillow 11.2.1 which is incompatible.
+```
+
+**This is normal and does not affect functionality.** These conflicts occur when other packages (like Streamlit) have stricter version requirements than our package. The PDF Processing System works correctly with the newer versions of these dependencies.
+
+#### Package Installation
+
+```bash
+# Install from wheel (recommended)
+pip install pdf_processing_system-1.0.0-py3-none-any.whl
+
+# Or install from source
+pip install pdf_processing_system-1.0.0.tar.gz
+
+# Test installation
+pdf-extractor --help
+```
+
 ## Usage
 
 ### Basic Usage
