@@ -1,4 +1,5 @@
-﻿{  "processing": {
+{
+  "processing": {
     "white_text_threshold": 15000000,
     "min_image_size": 10,
     "fuzzy_match_threshold": 0.6,
@@ -9,7 +10,8 @@
     "enable_page_conversion": true,
     "page_image_dpi": 300,
     "page_image_format": "png"
-  },  "output": {
+  },
+  "output": {
     "create_timestamp_dirs": true,
     "base_output_dir": "processed_data",
     "text_filename": "extracted_text.txt",
@@ -20,12 +22,14 @@
     "page_images_dirname": "page_images"
   },
   "sections": {
-    "Message From Founders": {"start": 3, "end": 4},
-    "General Information": {"start": 5, "end": 31},
-    "Sales": {"start": 32, "end": 78},
-    "Business Location A": {"start": 79, "end": 92},
-    "Business Location B": {"start": 93, "end": 96},
-    "Miscellaneous": {"start": 97, "end": 112}
+    "Sample Section": {
+      "start": 1,
+      "end": 1
+    },
+    "Miscellaneous": {
+      "start": 2,
+      "end": 3
+    }
   },
   "validation": {
     "check_page_overlaps": true,

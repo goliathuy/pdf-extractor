@@ -48,11 +48,24 @@ class TestPDFExtractor(unittest.TestCase):
     def test_parse_toc_structure(self):
         """Test TOC structure parsing."""
         sample_text = "Sample PDF text content"
-        toc_sections = parse_toc_structure(sample_text)
+        
+        # Test with config
+        test_config = {
+            "sections": {
+                "Introduction": {"start": 1, "end": 5},
+                "Main Content": {"start": 6, "end": 20}
+            }
+        }
+        toc_sections = parse_toc_structure(sample_text, test_config)
         
         # Check if we get the expected sections
         self.assertIsInstance(toc_sections, list)
-        self.assertGreater(len(toc_sections), 0)
+        self.assertEqual(len(toc_sections), 2)
+        
+        # Test without config (should return empty list)
+        toc_sections_empty = parse_toc_structure(sample_text)
+        self.assertIsInstance(toc_sections_empty, list)
+        self.assertEqual(len(toc_sections_empty), 0)
         
         # Check structure of first section
         first_section = toc_sections[0]

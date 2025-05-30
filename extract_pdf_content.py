@@ -266,33 +266,26 @@ def split_pdf_into_equal_parts(
     return output_dir
 
 
-def parse_toc_structure(text: str) -> List[Dict]:
-    """Parse the Table of Contents to extract section information."""
+def parse_toc_structure(text: str, config: Optional[Dict] = None) -> List[Dict]:
+    """Parse the Table of Contents to extract section information from config or detect from text."""
     toc_sections = []
 
-    # Define the known TOC structure based on analysis
-    # These are the main sections from the analyzed TOC
-    toc_data = [
-        {"title": "Message From Founders", "page": 3},
-        {"title": "General Information", "page": 5},
-        {"title": "Sales", "page": 34},
-        {"title": "Business Location A", "page": 79},
-        {"title": "Business Location B", "page": 93},
-        {"title": "Miscellaneous", "page": 97},
-    ]
+    # Load sections from config if available
+    if config and "sections" in config:
+        for title, page_info in config["sections"].items():
+            toc_sections.append(
+                {
+                    "title": title,
+                    "start_page": page_info["start"],
+                    "end_page": page_info["end"],
+                }
+            )
+    else:
+        # Fallback: try to detect sections from the text or return empty
+        # This allows for PDFs without predefined sections (like resumes)
+        logger.info("No sections defined in config - skipping section-based splitting")
 
-    # Convert to our section format
-    for i, section in enumerate(toc_data):
-        start_page = section["page"]
-        # Set end page as the start of next section minus 1, or total pages for last section
-        if i < len(toc_data) - 1:
-            end_page = toc_data[i + 1]["page"] - 1
-        else:
-            end_page = 112  # Total pages in the document
-
-        toc_sections.append(
-            {"title": section["title"], "start_page": start_page, "end_page": end_page}
-        )
+    return toc_sections
 
     return toc_sections
 
@@ -868,17 +861,24 @@ def main(pdf_path: Optional[str] = None, config: Optional[Dict] = None, **kwargs
         section_info = []
         section_output_dir = None
         if not kwargs.get("skip_sections", False):
-            # Load TOC structure
-            toc_sections = parse_toc_structure(text)
+            # Load TOC structure from config
+            toc_sections = parse_toc_structure(text, config)
 
-            # Fuzzy match section titles to refine TOC
-            refined_sections = fuzzy_match_section_titles(text, toc_sections)
+            # Only proceed with section splitting if sections are defined
+            if toc_sections:
+                # Fuzzy match section titles to refine TOC
+                refined_sections = fuzzy_match_section_titles(text, toc_sections)
 
-            # Split PDF by detected sections
-            logger.info("\n6. Splitting PDF by detected sections...")
-            section_output_dir, section_info = split_pdf_by_sections(
-                pdf_path, refined_sections, output_dir
-            )
+                # Split PDF by detected sections
+                logger.info("\n6. Splitting PDF by detected sections...")
+                section_output_dir, section_info = split_pdf_by_sections(
+                    pdf_path, refined_sections, output_dir
+                )
+            else:
+                logger.info(
+                    "\n6. No sections defined - skipping section-based splitting..."
+                )
+                section_info = []
         else:
             logger.info("\n6. Skipping section-based splitting (disabled)")
 
