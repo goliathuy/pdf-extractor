@@ -36,12 +36,23 @@ class ProgressIndicator:
         percentage = (self.current_item / self.total_items) * 100
         bar_length = 30
         filled_length = int(bar_length * self.current_item // self.total_items)
-        bar = "█" * filled_length + "-" * (bar_length - filled_length)
+        bar = "#" * filled_length + "-" * (bar_length - filled_length)
 
-        sys.stdout.write(
-            f"\r{self.description}: |{bar}| {percentage:.1f}% ({self.current_item}/{self.total_items})"
-        )
-        sys.stdout.flush()
+        # Use simple ASCII characters for Windows console compatibility
+        try:
+            progress_line = f"\r{self.description}: |{bar}| {percentage:.1f}% ({self.current_item}/{self.total_items})"
+            # Ensure we can encode to the console's encoding
+            sys.stdout.write(
+                progress_line.encode(sys.stdout.encoding, errors="replace").decode(
+                    sys.stdout.encoding
+                )
+            )
+            sys.stdout.flush()
+        except (UnicodeEncodeError, AttributeError):
+            # Fallback for Windows console encoding issues
+            print(
+                f"{self.description}: {percentage:.1f}% ({self.current_item}/{self.total_items})"
+            )
 
         if self.current_item >= self.total_items:
             print()  # New line when complete
@@ -710,7 +721,11 @@ def main(pdf_path: Optional[str] = None, config: Optional[Dict] = None, **kwargs
     logger.info("")
     try:
         # Check for extraction-only modes
-        if kwargs.get('skip_images') and kwargs.get('skip_page_images') and kwargs.get('skip_splitting'):
+        if (
+            kwargs.get("skip_images")
+            and kwargs.get("skip_page_images")
+            and kwargs.get("skip_splitting")
+        ):
             # TEXT-ONLY mode
             logger.info("1. Extracting text (TEXT-ONLY mode)...")
             color_threshold = config.get("processing", {}).get(
@@ -718,21 +733,25 @@ def main(pdf_path: Optional[str] = None, config: Optional[Dict] = None, **kwargs
             )
             text = extract_text(pdf_path, color_threshold)
             save_text(text, output_dir)
-            
+
             # Create minimal JSON for text-only
             logger.info("\n2. Saving text-only JSON metadata...")
             save_json(text, [], output_dir, [])
-            
+
             logger.info(f"\nText-only extraction complete!")
             logger.info(f"Text content saved in: {output_dir}")
-            
+
             return {
                 "output_dir": output_dir,
                 "text_length": len(text),
-                "mode": "text-only"
+                "mode": "text-only",
             }
-            
-        elif not kwargs.get('skip_images') and kwargs.get('skip_page_images') and kwargs.get('skip_splitting'):
+
+        elif (
+            not kwargs.get("skip_images")
+            and kwargs.get("skip_page_images")
+            and kwargs.get("skip_splitting")
+        ):
             # IMAGES-ONLY mode
             logger.info("1. Extracting embedded images (IMAGES-ONLY mode)...")
             # Still need text for processing but don't save separately
@@ -741,21 +760,25 @@ def main(pdf_path: Optional[str] = None, config: Optional[Dict] = None, **kwargs
             )
             text = extract_text(pdf_path, color_threshold)
             image_metadata = extract_images(pdf_path, output_dir)
-            
+
             # Create minimal JSON for images-only
             logger.info("\n2. Saving images-only JSON metadata...")
             save_json("", image_metadata, output_dir, [])
-            
+
             logger.info(f"\nImages-only extraction complete!")
             logger.info(f"Images saved in: {output_dir}")
-            
+
             return {
                 "output_dir": output_dir,
                 "image_count": len(image_metadata),
-                "mode": "images-only"
+                "mode": "images-only",
             }
-            
-        elif kwargs.get('skip_images') and not kwargs.get('skip_page_images') and kwargs.get('skip_splitting'):
+
+        elif (
+            kwargs.get("skip_images")
+            and not kwargs.get("skip_page_images")
+            and kwargs.get("skip_splitting")
+        ):
             # PAGE-IMAGES-ONLY mode
             logger.info("1. Converting pages to images (PAGE-IMAGES-ONLY mode)...")
             # Still need text for processing but don't save separately
@@ -763,7 +786,7 @@ def main(pdf_path: Optional[str] = None, config: Optional[Dict] = None, **kwargs
                 "white_text_threshold", 15000000
             )
             text = extract_text(pdf_path, color_threshold)
-            
+
             dpi = kwargs.get(
                 "page_image_dpi",
                 config.get("processing", {}).get("page_image_dpi", 300),
@@ -775,18 +798,18 @@ def main(pdf_path: Optional[str] = None, config: Optional[Dict] = None, **kwargs
             page_images_metadata = convert_pages_to_images(
                 pdf_path, output_dir, dpi=dpi, image_format=image_format
             )
-            
+
             # Create minimal JSON for page-images-only
             logger.info("\n2. Saving page-images-only JSON metadata...")
             save_json("", [], output_dir, page_images_metadata)
-            
+
             logger.info(f"\nPage-images-only conversion complete!")
             logger.info(f"Page images saved in: {output_dir}")
-            
+
             return {
                 "output_dir": output_dir,
                 "page_image_count": len(page_images_metadata),
-                "mode": "page-images-only"
+                "mode": "page-images-only",
             }
 
         # FULL PROCESSING MODE (with selective options)
@@ -821,11 +844,11 @@ def main(pdf_path: Optional[str] = None, config: Optional[Dict] = None, **kwargs
                 pdf_path, output_dir, dpi=dpi, image_format=image_format
             )
         else:
-            logger.info("\n3. Skipping page-to-image conversion (disabled)")        # Save combined JSON
+            logger.info(
+                "\n3. Skipping page-to-image conversion (disabled)"
+            )  # Save combined JSON
         logger.info("\n4. Saving JSON metadata...")
-        save_json(
-            text, image_metadata, output_dir, page_images_metadata
-        )
+        save_json(text, image_metadata, output_dir, page_images_metadata)
 
         # Split PDF into equal parts (unless disabled)
         split_output_dir = None
@@ -897,76 +920,76 @@ def main(pdf_path: Optional[str] = None, config: Optional[Dict] = None, **kwargs
 def combine_images_to_pdf(images_dir: str, output_dir: str) -> dict:
     """
     Combine all page images from a directory into a single PDF file.
-    
+
     Args:
         images_dir (str): Directory containing page images (PNG format)
         output_dir (str): Path where the combined PDF will be saved
-        
+
     Returns:
         dict: Metadata about the PDF creation process
     """
     try:
         import glob
-        
+
         # Find all PNG files in the directory
         image_pattern = os.path.join(images_dir, "page_*.png")
         image_files = sorted(glob.glob(image_pattern))
-        
+
         if not image_files:
             raise PDFProcessingError(f"No page images found in {images_dir}")
-        
+
         logger.info(f"Found {len(image_files)} page images to combine")
         logger.info(f"Creating PDF: {output_dir}")
-        
+
         # Create a new PDF document
         pdf_doc = fitz.open()  # Create new empty PDF
-        
+
         # Progress indicator
         progress = ProgressIndicator(len(image_files), "Combining images to PDF")
-        
+
         # Add each image as a page in the PDF
         for i, image_path in enumerate(image_files):
             try:
                 # Open the image
                 img_doc = fitz.open(image_path)
-                
+
                 # Convert image to PDF page
                 pdf_bytes = img_doc.convert_to_pdf()
                 img_pdf = fitz.open("pdf", pdf_bytes)
-                
+
                 # Insert the page into our main PDF
                 pdf_doc.insert_pdf(img_pdf)
-                
+
                 # Clean up
                 img_doc.close()
                 img_pdf.close()
-                
+
                 progress.update()
-                
+
             except Exception as e:
                 logger.warning(f"Failed to add image {image_path}: {str(e)}")
                 continue
-        
+
         # Save the combined PDF
         pdf_doc.save(output_dir)
         pdf_doc.close()
-        
+
         # Get file size
         file_size = os.path.getsize(output_dir)
         file_size_mb = file_size / (1024 * 1024)
-        
+
         logger.info(f"Combined PDF created successfully: {output_dir}")
         logger.info(f"PDF size: {file_size_mb:.2f} MB")
         logger.info(f"Total pages: {len(image_files)}")
-        
+
         return {
             "output_file": output_dir,
             "page_count": len(image_files),
             "file_size_mb": round(file_size_mb, 2),
             "source_images": len(image_files),
-            "creation_time": datetime.datetime.now().isoformat()
+            "creation_time": datetime.datetime.now().isoformat(),
         }
-        
+
     except Exception as e:
         logger.error(f"Error combining images to PDF: {str(e)}")
         raise PDFProcessingError(f"Failed to combine images to PDF: {str(e)}")
