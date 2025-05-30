@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2025-05-30
+
+### Fixed
+- **Hardcoded Business Sections Issue** - Fixed inappropriate business section detection in resume PDFs
+- **Configuration-Based Section Detection** - Modified `parse_toc_structure` to read sections from config.json
+- **Smart Section Processing** - Added logic to skip section splitting when no sections are defined in configuration
+- **UTF-8 BOM Issues** - Resolved JSON configuration file encoding problems that caused processing errors
+- **Test Function Compatibility** - Updated test suite to handle new function signatures
+
+### Changed
+- `parse_toc_structure` function now accepts optional config parameter
+- Section splitting now dynamically reads from configuration instead of hardcoded values
+- Enhanced logging to indicate when section splitting is skipped for non-business documents
+
 ## [1.0.0] - 2025-05-30
 
 ### Added

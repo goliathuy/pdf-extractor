@@ -13,10 +13,10 @@ Features:
 - CLI interface with comprehensive options
 
 Author: goliathuy
-Version: 1.0.0
+Version: 1.0.1
 """
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __author__ = "goliathuy"
 __email__ = "aug1381-goliathuy@yahoo.com"
 __description__ = "Comprehensive PDF content extraction and intelligent splitting system"

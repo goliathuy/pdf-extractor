@@ -13,7 +13,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="pdf-processing-system",
-    version="1.0.0",
+    version="1.0.1",
     author="goliathuy",
     author_email="aug1381-goliathuy@yahoo.com",
     description="Comprehensive PDF content extraction and intelligent splitting system",
