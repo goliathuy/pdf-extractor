@@ -81,12 +81,12 @@ def main():
     
     print("\n🚀 Next steps:")
     print("1. Test the package locally:")
-    print("   pip install dist/pdf_processing_system-1.0.0-py3-none-any.whl")
+    print("   pip install dist/pdf_processing_system-1.0.1-py3-none-any.whl")
     print("\n2. Upload to PyPI (when ready):")
     print("   python -m twine upload dist/*")
     print("\n3. Create a Git tag:")
-    print("   git tag -a v1.0.0 -m 'Release v1.0.0'")
-    print("   git push origin v1.0.0")
+    print("   git tag -a v1.0.1 -m 'Release v1.0.1'")
+    print("   git push origin v1.0.1")
 
 if __name__ == "__main__":
     main()

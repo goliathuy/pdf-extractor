@@ -63,10 +63,10 @@ streamlit 1.32.0 requires pillow<11,>=7.1.0, but you have pillow 11.2.1 which is
 
 ```bash
 # Install from wheel (recommended)
-pip install pdf_processing_system-1.0.0-py3-none-any.whl
+pip install pdf_processing_system-1.0.1-py3-none-any.whl
 
 # Or install from source
-pip install pdf_processing_system-1.0.0.tar.gz
+pip install pdf_processing_system-1.0.1.tar.gz
 
 # Test installation
 pdf-extractor --help
